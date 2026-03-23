@@ -1,0 +1,63 @@
+package bootstrap
+
+import (
+	"api/internal/infrastructure/app"
+	"api/internal/infrastructure/config"
+	"api/internal/infrastructure/container"
+	"api/internal/infrastructure/logger"
+	"api/internal/infrastructure/middlewares"
+	"api/internal/infrastructure/providers"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+// NewTestingApi initializes the app optimized for tests.
+func NewTestingApi(cfg *config.Config) (*app.App, error) {
+	cfg.App.Env = config.TestingEnv
+
+	err := logger.New(cfg.Log)
+
+	if err != nil {
+		return nil, err
+	}
+
+	var ctr *container.Container
+	ctr, err = container.New(cfg.Database, cfg.Redis)
+
+	if err != nil {
+		return nil, err
+	}
+
+	appInstance := &app.App{
+		Config:    cfg,
+		Container: ctr,
+	}
+
+	appInstance.AddCloser(func() error {
+		db, _ := ctr.DefaultConnection.DB()
+
+		if db != nil {
+			_ = db.Close()
+		}
+
+		if ctr.Redis != nil {
+			_ = ctr.Redis.Close()
+		}
+
+		return nil
+	})
+
+	return appInstance, nil
+}
+
+// NewTestingHandler returns the Gin engine without an HTTP server.
+func NewTestingHandler(appInstance *app.App) http.Handler {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+
+	middlewares.RegisterMiddlewares(engine, appInstance.Config.App.Env)
+	providers.RegisterRoutes(engine, appInstance)
+
+	return engine
+}
