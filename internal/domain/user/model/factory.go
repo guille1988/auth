@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
@@ -25,11 +26,14 @@ func NewFactory(db *gorm.DB) *Factory {
 }
 
 func newUser(hashedPassword string) User {
+	now := time.Now()
+
 	return User{
-		UUID:     uuid.New(),
-		Name:     gofakeit.Name(),
-		Email:    gofakeit.Email(),
-		Password: hashedPassword,
+		UUID:            uuid.New(),
+		Name:            gofakeit.Name(),
+		Email:           gofakeit.Email(),
+		Password:        hashedPassword,
+		EmailVerifiedAt: &now,
 	}
 }
 

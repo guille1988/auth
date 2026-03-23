@@ -35,7 +35,7 @@ build-prod:
 run-dev:
 	docker exec $(CONTAINER_NAME) ./bin/migrate --fresh
 	docker exec $(CONTAINER_NAME) ./bin/seed
-	docker logs -f api
+	docker logs -f $(CONTAINER_NAME)
 
 run-prod: build-prod
 	docker exec $(CONTAINER_NAME) ./bin/migrate
