@@ -2,6 +2,7 @@ package integration
 
 import (
 	"auth/internal/bootstrap"
+	"auth/internal/infrastructure/app"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/database"
 	"bytes"
@@ -167,6 +168,10 @@ func GetToken() string {
 	_ = json.Unmarshal(response.Body.Bytes(), &data)
 
 	return data["access_token"].(string)
+}
+
+func GetApp() (*app.App, error) {
+	return bootstrap.NewTestingApi(TestConfig)
 }
 
 // ExecuteRequest performs an HTTP request against the global test handler and returns the response recorder.

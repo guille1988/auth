@@ -31,9 +31,10 @@ type RedisConfig struct {
 }
 
 type AuthConfig struct {
-	JWTSecret          string
-	AccessTokenExpire  time.Duration
-	RefreshTokenExpire time.Duration
+	JWTSecret               string
+	AccessTokenExpire       time.Duration
+	RefreshTokenExpire      time.Duration
+	EmailVerificationExpire time.Duration
 }
 
 type ConnectionName string
@@ -134,9 +135,10 @@ func New() (*Config, error) {
 			Database: env.GetEnvAsInt("REDIS_DATABASE", 0),
 		},
 		Auth: AuthConfig{
-			JWTSecret:          env.GetEnvAsString("AUTH_JWT_SECRET", "secret"),
-			AccessTokenExpire:  time.Duration(env.GetEnvAsInt("AUTH_ACCESS_TOKEN_EXPIRE", 15)) * time.Minute,
-			RefreshTokenExpire: time.Duration(env.GetEnvAsInt("AUTH_REFRESH_TOKEN_EXPIRE", 7)) * 24 * time.Hour,
+			JWTSecret:               env.GetEnvAsString("AUTH_JWT_SECRET", "secret"),
+			AccessTokenExpire:       time.Duration(env.GetEnvAsInt("AUTH_ACCESS_TOKEN_EXPIRE", 15)) * time.Minute,
+			RefreshTokenExpire:      time.Duration(env.GetEnvAsInt("AUTH_REFRESH_TOKEN_EXPIRE", 10080)) * time.Minute,
+			EmailVerificationExpire: time.Duration(env.GetEnvAsInt("AUTH_EMAIL_VERIFICATION_EXPIRE", 60)) * time.Minute,
 		},
 	}
 

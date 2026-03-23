@@ -39,6 +39,7 @@ func (module *Module) Register(group *gin.RouterGroup) {
 		auth.POST("/register", handlers.NewRegister(redisRepo, module.userRepo, module.jwtService, module.authConfig, module.env).Handle)
 		auth.POST("/login", handlers.NewLogin(redisRepo, module.userRepo, module.jwtService, module.authConfig, module.env).Handle)
 		auth.POST("/refresh", handlers.NewRefresh(redisRepo, module.userRepo, module.jwtService, module.authConfig, module.env).Handle)
+		auth.POST("/verify-email", handlers.NewVerifyEmail(module.userRepo, module.jwtService, module.env).Handle)
 		auth.DELETE("/logout", handlers.NewLogout(redisRepo, module.env).Handle)
 	}
 }

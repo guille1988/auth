@@ -10,8 +10,9 @@ import (
 )
 
 type JWTService struct {
-	secretKey         []byte
-	accessTokenExpire time.Duration
+	secretKey               []byte
+	accessTokenExpire       time.Duration
+	emailVerificationExpire time.Duration
 }
 
 type TokenResponse struct {
@@ -28,9 +29,26 @@ type Claims struct {
 
 func NewJWTService(cfg config.AuthConfig) *JWTService {
 	return &JWTService{
-		secretKey:         []byte(cfg.JWTSecret),
-		accessTokenExpire: cfg.AccessTokenExpire,
+		secretKey:               []byte(cfg.JWTSecret),
+		accessTokenExpire:       cfg.AccessTokenExpire,
+		emailVerificationExpire: cfg.EmailVerificationExpire,
 	}
+}
+
+func (service *JWTService) GenerateEmailVerificationToken(userUUID string) (string, error) {
+	expirationTime := time.Now().Add(service.emailVerificationExpire)
+
+	claims := &Claims{
+		UserUUID: userUUID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString(service.secretKey)
 }
 
 func (service *JWTService) GenerateAccessToken(userUUID string, refreshToken string) (*TokenResponse, error) {

@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"auth/internal/domain/auth/services"
+	userModel "auth/internal/domain/user/model"
 	"auth/tests/integration"
 	"bytes"
 	"encoding/json"
@@ -163,5 +165,46 @@ func TestAuthModule(test *testing.T) {
 		refreshResponse := integration.ExecuteRequest(refreshRequest)
 
 		assert.Equal(test, http.StatusUnauthorized, refreshResponse.Code)
+	})
+
+	integration.TestCase(test, "it should verify a user email", func(test *testing.T) {
+		email := gofakeit.Email()
+		password := "password123"
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": password,
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(registerRequest)
+
+		// Buscar el usuario para obtener su UUID
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+		userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepo.FindByEmail(email)
+
+		// Generar un token de verificación usando el servicio
+		jwtService := services.NewJWTService(appInstance.Config.Auth)
+		token, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+		// Verificar el email
+		verifyPayload := map[string]string{
+			"token": token,
+		}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyReq, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyReq.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(verifyReq)
+
+		assert.Equal(test, http.StatusOK, response.Code)
+
+		// Verificar en la DB que email_verified_at no sea null
+		updatedUser, _ := userRepo.FindByEmail(email)
+		assert.NotNil(test, updatedUser.EmailVerifiedAt)
 	})
 }
