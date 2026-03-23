@@ -1,8 +1,8 @@
 package app
 
 import (
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/container"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/container"
 )
 
 type App struct {

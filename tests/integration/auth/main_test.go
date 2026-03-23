@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"api/tests/integration"
+	"auth/tests/integration"
 	"testing"
 )
 

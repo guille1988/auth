@@ -1,7 +1,7 @@
 package model
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"time"
 
 	"github.com/google/uuid"

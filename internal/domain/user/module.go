@@ -1,9 +1,9 @@
 package user
 
 import (
-	"api/internal/domain/user/handlers"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/middlewares"
+	"auth/internal/domain/user/handlers"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/middlewares"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

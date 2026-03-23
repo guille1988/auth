@@ -1,4 +1,4 @@
-CONTAINER_NAME=api
+CONTAINER_NAME=auth
 
 .PHONY: up down migrate seed build-dev build-prod run-dev run-prod update test init
 

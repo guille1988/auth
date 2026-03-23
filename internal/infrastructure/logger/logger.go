@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"io"
 	"log/slog"
 	"os"

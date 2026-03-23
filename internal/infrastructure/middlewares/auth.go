@@ -1,9 +1,9 @@
 package middlewares
 
 import (
-	"api/internal/domain/auth/services"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/exceptions"
+	"auth/internal/domain/auth/services"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/exceptions"
 	"errors"
 	"strings"
 

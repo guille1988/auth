@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"api/internal/infrastructure/redis"
+	"auth/internal/infrastructure/redis"
 	"context"
 )
 

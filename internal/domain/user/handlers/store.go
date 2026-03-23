@@ -1,12 +1,12 @@
 package handlers
 
 import (
-	"api/internal/domain/user/actions"
-	"api/internal/domain/user/data"
-	"api/internal/domain/user/model"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/exceptions"
-	"api/internal/infrastructure/validator"
+	"auth/internal/domain/user/actions"
+	"auth/internal/domain/user/data"
+	"auth/internal/domain/user/model"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/exceptions"
+	"auth/internal/infrastructure/validator"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

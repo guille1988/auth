@@ -1,11 +1,11 @@
 package bootstrap
 
 import (
-	"api/internal/domain/user"
-	"api/internal/infrastructure/app"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/container"
-	"api/internal/infrastructure/logger"
+	"auth/internal/domain/user"
+	"auth/internal/infrastructure/app"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/container"
+	"auth/internal/infrastructure/logger"
 	"fmt"
 	"log/slog"
 	"time"

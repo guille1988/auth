@@ -1,7 +1,7 @@
 package config
 
 import (
-	"api/internal/infrastructure/env"
+	"auth/internal/infrastructure/env"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -114,9 +114,9 @@ func New() (*Config, error) {
 					Driver:             Driver(env.GetEnvAsString("DB_DRIVER", string(MySQLDriver))),
 					Host:               env.GetEnvAsString("DB_HOST", "mysql"),
 					Port:               env.GetEnvAsString("DB_PORT", "3306"),
-					Database:           env.GetEnvAsString("DB_DATABASE", "api"),
-					Username:           env.GetEnvAsString("DB_USERNAME", "api"),
-					Password:           env.GetEnvAsString("DB_PASSWORD", "api"),
+					Database:           env.GetEnvAsString("DB_DATABASE", "auth"),
+					Username:           env.GetEnvAsString("DB_USERNAME", "auth"),
+					Password:           env.GetEnvAsString("DB_PASSWORD", "auth"),
 					MaxIdleConnections: env.GetEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 10),
 					MaxOpenConnections: env.GetEnvAsInt("DB_MAX_OPEN_CONNECTIONS", 10),
 				},
@@ -124,13 +124,13 @@ func New() (*Config, error) {
 		},
 		Log: LogConfig{
 			Driver: LogDriver(env.GetEnvAsString("LOG_DRIVER", string(StdoutFormat))),
-			Path:   env.GetEnvAsString("LOG_PATH", "logs/api.log"),
+			Path:   env.GetEnvAsString("LOG_PATH", "logs/auth.log"),
 			Level:  LogLevel(env.GetEnvAsString("LOG_LEVEL", string(InfoLevel))),
 		},
 		Redis: RedisConfig{
 			Host:     env.GetEnvAsString("REDIS_HOST", "redis"),
 			Port:     env.GetEnvAsString("REDIS_PORT", "6379"),
-			Password: env.GetEnvAsString("REDIS_PASSWORD", "api"),
+			Password: env.GetEnvAsString("REDIS_PASSWORD", "auth"),
 			Database: env.GetEnvAsInt("REDIS_DATABASE", 0),
 		},
 		Auth: AuthConfig{

@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"api/internal/domain/auth/actions"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/exceptions"
-	"api/internal/infrastructure/redis"
+	"auth/internal/domain/auth/actions"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/exceptions"
+	"auth/internal/infrastructure/redis"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

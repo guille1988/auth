@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"api/internal/domain/auth/handlers"
-	"api/internal/domain/auth/services"
-	userModel "api/internal/domain/user/model"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/redis"
+	"auth/internal/domain/auth/handlers"
+	"auth/internal/domain/auth/services"
+	userModel "auth/internal/domain/user/model"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/redis"
 
 	"github.com/gin-gonic/gin"
 	goredis "github.com/redis/go-redis/v9"

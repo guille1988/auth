@@ -1,7 +1,7 @@
 package actions
 
 import (
-	"api/internal/domain/user/model"
+	"auth/internal/domain/user/model"
 )
 
 type Delete struct {

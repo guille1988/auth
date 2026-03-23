@@ -1,11 +1,11 @@
 package actions
 
 import (
-	"api/internal/domain/auth/data"
-	"api/internal/domain/auth/services"
-	userModel "api/internal/domain/user/model"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/redis"
+	"auth/internal/domain/auth/data"
+	"auth/internal/domain/auth/services"
+	userModel "auth/internal/domain/user/model"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/redis"
 	"context"
 	"time"
 

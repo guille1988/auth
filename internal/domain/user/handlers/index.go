@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"api/internal/domain/user/model"
-	"api/internal/domain/user/responses"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/exceptions"
+	"auth/internal/domain/user/model"
+	"auth/internal/domain/user/responses"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/exceptions"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

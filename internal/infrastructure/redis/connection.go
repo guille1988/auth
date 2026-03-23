@@ -1,7 +1,7 @@
 package redis
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"context"
 	"fmt"
 	"time"

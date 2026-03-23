@@ -1,7 +1,7 @@
 package responses
 
 import (
-	"api/internal/domain/auth/services"
+	"auth/internal/domain/auth/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

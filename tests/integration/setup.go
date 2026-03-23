@@ -1,9 +1,9 @@
 package integration
 
 import (
-	"api/internal/bootstrap"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/database"
+	"auth/internal/bootstrap"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/database"
 	"bytes"
 	"context"
 	"encoding/json"

@@ -1,9 +1,9 @@
 package providers
 
 import (
-	"api/internal/domain/auth"
-	"api/internal/domain/user"
-	"api/internal/infrastructure/app"
+	"auth/internal/domain/auth"
+	"auth/internal/domain/user"
+	"auth/internal/infrastructure/app"
 
 	"github.com/gin-gonic/gin"
 )

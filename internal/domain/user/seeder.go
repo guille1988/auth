@@ -1,9 +1,9 @@
 package user
 
 import (
-	"api/internal/domain/user/model"
-	"api/internal/infrastructure/app"
-	"api/internal/infrastructure/config"
+	"auth/internal/domain/user/model"
+	"auth/internal/infrastructure/app"
+	"auth/internal/infrastructure/config"
 	"log/slog"
 )
 

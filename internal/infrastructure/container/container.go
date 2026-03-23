@@ -1,9 +1,9 @@
 package container
 
 import (
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/database"
-	"api/internal/infrastructure/redis"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/database"
+	"auth/internal/infrastructure/redis"
 
 	goredis "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"

@@ -1,7 +1,7 @@
 package database
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"errors"
 	"fmt"
 
@@ -13,10 +13,10 @@ import (
 )
 
 const (
-	localPath      string = "file:///api/internal/infrastructure/database/migrations/local"
-	testingPath    string = "file:///api/internal/infrastructure/database/migrations/testing"
-	stagingPath    string = "file:///api/internal/infrastructure/database/migrations/staging"
-	productionPath string = "file:///api/internal/infrastructure/database/migrations/production"
+	localPath      string = "file:///auth/internal/infrastructure/database/migrations/local"
+	testingPath    string = "file:///auth/internal/infrastructure/database/migrations/testing"
+	stagingPath    string = "file:///auth/internal/infrastructure/database/migrations/staging"
+	productionPath string = "file:///auth/internal/infrastructure/database/migrations/production"
 )
 
 // NewMigration returns a migration instance according to the connection name.

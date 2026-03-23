@@ -1,8 +1,8 @@
 package main
 
 import (
-	"api/internal/bootstrap"
-	"api/internal/infrastructure/logger"
+	"auth/internal/bootstrap"
+	"auth/internal/infrastructure/logger"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 package exceptions
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

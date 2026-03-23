@@ -1,7 +1,7 @@
 package services
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"errors"
 	"fmt"
 	"time"

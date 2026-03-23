@@ -1,7 +1,7 @@
 package database
 
 import (
-	"api/internal/infrastructure/config"
+	"auth/internal/infrastructure/config"
 	"database/sql"
 	"fmt"
 

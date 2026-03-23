@@ -1,8 +1,8 @@
 package actions
 
 import (
-	"api/internal/domain/user/data"
-	"api/internal/domain/user/model"
+	"auth/internal/domain/user/data"
+	"auth/internal/domain/user/model"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

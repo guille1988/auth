@@ -1,8 +1,8 @@
 package middlewares
 
 import (
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/exceptions"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/exceptions"
 
 	"github.com/gin-gonic/gin"
 )

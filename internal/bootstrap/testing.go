@@ -1,12 +1,12 @@
 package bootstrap
 
 import (
-	"api/internal/infrastructure/app"
-	"api/internal/infrastructure/config"
-	"api/internal/infrastructure/container"
-	"api/internal/infrastructure/logger"
-	"api/internal/infrastructure/middlewares"
-	"api/internal/infrastructure/providers"
+	"auth/internal/infrastructure/app"
+	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/container"
+	"auth/internal/infrastructure/logger"
+	"auth/internal/infrastructure/middlewares"
+	"auth/internal/infrastructure/providers"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
