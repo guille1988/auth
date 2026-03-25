@@ -17,7 +17,7 @@ type Container struct {
 }
 
 // New creates a new container with initialized database connections.
-func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig, rabbitCfg config.RabbitMQConfig) (*Container, error) {
+func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig) (*Container, error) {
 	defaultConnection, err := database.NewConnection(dbCfg.Connections[config.Default])
 
 	if err != nil {
@@ -28,15 +28,6 @@ func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig, rabbitCfg con
 	redisClient, err = redis.NewConnection(redisCfg)
 
 	if err != nil {
-		return nil, err
-	}
-
-	var publisher *rabbitmq.Publisher
-	publisher, err = rabbitmq.NewPublisher(rabbitCfg)
-
-	if err != nil {
-		_ = redisClient.Close()
-
 		sqlDB, _ := defaultConnection.DB()
 		_ = sqlDB.Close()
 
@@ -46,6 +37,18 @@ func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig, rabbitCfg con
 	return &Container{
 		DefaultConnection: defaultConnection,
 		Redis:             redisClient,
-		Publisher:         publisher,
 	}, nil
+}
+
+// InitPublisher initializes the RabbitMQ publisher.
+func (container *Container) InitPublisher(rabbitCfg config.RabbitMQConfig) error {
+	publisher, err := rabbitmq.NewPublisher(rabbitCfg)
+
+	if err != nil {
+		return err
+	}
+
+	container.Publisher = publisher
+
+	return nil
 }

@@ -45,6 +45,10 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 			_ = ctr.Redis.Close()
 		}
 
+		if ctr.Publisher != nil {
+			_ = ctr.Publisher.Close()
+		}
+
 		return nil
 	})
 
