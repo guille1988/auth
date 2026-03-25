@@ -9,7 +9,6 @@ import (
 	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -54,13 +53,15 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	event := events.UserRegistered{
-		Email: user.Email,
-		Name:  user.Name,
+	event := events.NewUserRegisteredEvent(user.Email, user.Name)
+	var eventJson []byte
+	eventJson, err = event.ToJson()
+
+	if err != nil {
+		return nil, err
 	}
 
-	eventJson, _ := json.Marshal(event)
-	_ = action.publisher.Publish(context.Background(), "", "user.registered", eventJson)
+	_ = action.publisher.Publish(context.Background(), "", event.GetRoutingKey(), eventJson)
 
 	refreshToken := uuid.New().String()
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
