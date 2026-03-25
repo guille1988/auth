@@ -29,6 +29,12 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 		return nil, err
 	}
 
+	err = ctr.InitPublisher(cfg.RabbitMQ)
+
+	if err != nil {
+		return nil, err
+	}
+
 	appInstance := &app.App{
 		Config:    cfg,
 		Container: ctr,

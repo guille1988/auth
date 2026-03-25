@@ -14,6 +14,7 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go/modules/mysql v0.41.0
+	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.41.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.41.0
 	golang.org/x/crypto v0.48.0
 	gorm.io/driver/mysql v1.6.0
