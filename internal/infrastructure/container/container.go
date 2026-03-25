@@ -3,6 +3,7 @@ package container
 import (
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/database"
+	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
 
 	goredis "github.com/redis/go-redis/v9"
@@ -12,10 +13,11 @@ import (
 type Container struct {
 	DefaultConnection *gorm.DB
 	Redis             *goredis.Client
+	Publisher         *rabbitmq.Publisher
 }
 
 // New creates a new container with initialized database connections.
-func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig) (*Container, error) {
+func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig, rabbitCfg config.RabbitMQConfig) (*Container, error) {
 	defaultConnection, err := database.NewConnection(dbCfg.Connections[config.Default])
 
 	if err != nil {
@@ -29,8 +31,21 @@ func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig) (*Container, 
 		return nil, err
 	}
 
+	var publisher *rabbitmq.Publisher
+	publisher, err = rabbitmq.NewPublisher(rabbitCfg)
+
+	if err != nil {
+		_ = redisClient.Close()
+
+		sqlDB, _ := defaultConnection.DB()
+		_ = sqlDB.Close()
+
+		return nil, err
+	}
+
 	return &Container{
 		DefaultConnection: defaultConnection,
 		Redis:             redisClient,
+		Publisher:         publisher,
 	}, nil
 }

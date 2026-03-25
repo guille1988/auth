@@ -14,6 +14,14 @@ type Config struct {
 	Log      LogConfig
 	Redis    RedisConfig
 	Auth     AuthConfig
+	RabbitMQ RabbitMQConfig
+}
+
+type RabbitMQConfig struct {
+	Host     string
+	Port     string
+	User     string
+	Password string
 }
 
 // AppConfig represents the application configuration.
@@ -139,6 +147,12 @@ func New() (*Config, error) {
 			AccessTokenExpire:       time.Duration(env.GetEnvAsInt("AUTH_ACCESS_TOKEN_EXPIRE", 15)) * time.Minute,
 			RefreshTokenExpire:      time.Duration(env.GetEnvAsInt("AUTH_REFRESH_TOKEN_EXPIRE", 10080)) * time.Minute,
 			EmailVerificationExpire: time.Duration(env.GetEnvAsInt("AUTH_EMAIL_VERIFICATION_EXPIRE", 60)) * time.Minute,
+		},
+		RabbitMQ: RabbitMQConfig{
+			Host:     env.GetEnvAsString("RABBITMQ_HOST", "rabbitmq"),
+			Port:     env.GetEnvAsString("RABBITMQ_PORT", "5672"),
+			User:     env.GetEnvAsString("RABBITMQ_USER", "guest"),
+			Password: env.GetEnvAsString("RABBITMQ_PASSWORD", "guest"),
 		},
 	}
 

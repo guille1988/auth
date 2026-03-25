@@ -34,7 +34,7 @@ func NewApi() (*app.App, error) {
 	}
 
 	var ctr *container.Container
-	ctr, err = container.New(cfg.Database, cfg.Redis)
+	ctr, err = container.New(cfg.Database, cfg.Redis, cfg.RabbitMQ)
 
 	if err != nil {
 		return nil, err
@@ -52,6 +52,9 @@ func NewApi() (*app.App, error) {
 
 	appInstance.AddCloser(func() error {
 		return ctr.Redis.Close()
+	})
+	appInstance.AddCloser(func() error {
+		return ctr.Publisher.Close()
 	})
 
 	return appInstance, nil

@@ -2,11 +2,14 @@ package actions
 
 import (
 	"auth/internal/domain/auth/data"
+	"auth/internal/domain/auth/events"
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,14 +19,16 @@ import (
 type Register struct {
 	userRepository  userModel.Repository
 	redisRepository *redis.Repository
+	publisher       *rabbitmq.Publisher
 	jwtService      *services.JWTService
 	authConfig      config.AuthConfig
 }
 
-func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
+func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, publisher *rabbitmq.Publisher, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
 	return &Register{
 		userRepository:  userRepository,
 		redisRepository: redisRepository,
+		publisher:       publisher,
 		jwtService:      jwtService,
 		authConfig:      authConfig,
 	}
@@ -48,6 +53,14 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 	if err != nil {
 		return nil, err
 	}
+
+	event := events.UserRegistered{
+		Email: user.Email,
+		Name:  user.Name,
+	}
+
+	eventJson, _ := json.Marshal(event)
+	_ = action.publisher.Publish(context.Background(), "", "user.registered", eventJson)
 
 	refreshToken := uuid.New().String()
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
