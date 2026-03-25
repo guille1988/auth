@@ -47,14 +47,15 @@ func NewSeeder() (*SeederApp, error) {
 		Container: ctr,
 	}
 
-	appInstance.AddCloser(func() error {
-		db, _ := ctr.DefaultConnection.DB()
-		return db.Close()
-	})
-
-	appInstance.AddCloser(func() error {
-		return ctr.Redis.Close()
-	})
+	appInstance.AddCloser(
+		func() error {
+			db, _ := ctr.DefaultConnection.DB()
+			return db.Close()
+		},
+		func() error {
+			return ctr.Redis.Close()
+		},
+	)
 
 	var seeders = []Seeder{
 		user.NewSeeder(appInstance),

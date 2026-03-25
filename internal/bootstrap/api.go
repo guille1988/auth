@@ -49,21 +49,21 @@ func NewApi() (*app.App, error) {
 		Container: ctr,
 	}
 
-	appInstance.AddCloser(func() error {
-		db, _ := ctr.DefaultConnection.DB()
-		return db.Close()
-	})
-
-	appInstance.AddCloser(func() error {
-		return ctr.Redis.Close()
-	})
-
-	appInstance.AddCloser(func() error {
-		if ctr.Publisher != nil {
-			return ctr.Publisher.Close()
-		}
-		return nil
-	})
+	appInstance.AddCloser(
+		func() error {
+			db, _ := ctr.DefaultConnection.DB()
+			return db.Close()
+		},
+		func() error {
+			return ctr.Redis.Close()
+		},
+		func() error {
+			if ctr.Publisher != nil {
+				return ctr.Publisher.Close()
+			}
+			return nil
+		},
+	)
 
 	return appInstance, nil
 }

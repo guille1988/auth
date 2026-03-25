@@ -11,9 +11,9 @@ type App struct {
 	closers   []func() error
 }
 
-// AddCloser registers a cleanup function to be executed when the application closes.
-func (app *App) AddCloser(fn func() error) {
-	app.closers = append(app.closers, fn)
+// AddCloser registers cleanup functions to be executed when the application closes.
+func (app *App) AddCloser(functions ...func() error) {
+	app.closers = append(app.closers, functions...)
 }
 
 // CloseAll executes all registered cleanup functions in reverse order.

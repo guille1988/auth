@@ -52,14 +52,15 @@ func NewMigration() (*MigrationApp, error) {
 		return nil, err
 	}
 
-	appInstance.AddCloser(func() error {
-		db, _ := ctr.DefaultConnection.DB()
-		return db.Close()
-	})
-
-	appInstance.AddCloser(func() error {
-		return ctr.Redis.Close()
-	})
+	appInstance.AddCloser(
+		func() error {
+			db, _ := ctr.DefaultConnection.DB()
+			return db.Close()
+		},
+		func() error {
+			return ctr.Redis.Close()
+		},
+	)
 
 	return &MigrationApp{
 		App:       appInstance,
