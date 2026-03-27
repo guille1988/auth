@@ -16,7 +16,7 @@ import (
 func NewTestingApi(cfg *config.Config) (*app.App, error) {
 	cfg.App.Env = config.TestingEnv
 
-	err := logger.New(cfg.Log)
+	err := logger.New(cfg.Log, cfg.App.Name)
 
 	if err != nil {
 		return nil, err

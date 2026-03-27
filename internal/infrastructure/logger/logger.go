@@ -9,7 +9,7 @@ import (
 )
 
 // New initializes the global slog logger based on the provided driver, path, and level.
-func New(log config.LogConfig) error {
+func New(log config.LogConfig, serviceName string) error {
 	var level slog.Level
 	var output io.Writer = os.Stdout
 
@@ -32,7 +32,11 @@ func New(log config.LogConfig) error {
 		output = file
 	}
 
-	handler := slog.NewJSONHandler(output, &slog.HandlerOptions{Level: level})
+	handler := slog.NewJSONHandler(output, &slog.HandlerOptions{Level: level}).
+		WithAttrs([]slog.Attr{
+			slog.String("service", serviceName),
+		})
+
 	logger := slog.New(handler)
 
 	slog.SetDefault(logger)
