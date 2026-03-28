@@ -123,7 +123,7 @@ func New() (*Config, error) {
 			Connections: map[ConnectionName]DatabaseConnection{
 				Default: {
 					Driver:             Driver(env.GetEnvAsString("DB_DRIVER", string(MySQLDriver))),
-					Host:               env.GetEnvAsString("DB_HOST", "mysql"),
+					Host:               env.GetEnvAsString("DB_HOST", "mysql_auth"),
 					Port:               env.GetEnvAsString("DB_PORT", "3306"),
 					Database:           env.GetEnvAsString("DB_DATABASE", "auth"),
 					Username:           env.GetEnvAsString("DB_USERNAME", "auth"),
