@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"auth/internal/infrastructure/config"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 
@@ -17,6 +18,7 @@ type Publisher struct {
 func NewPublisher(cfg config.RabbitMQConfig) (*Publisher, error) {
 	url := fmt.Sprintf("amqp://%s:%s@%s:%s/", cfg.User, cfg.Password, cfg.Host, cfg.Port)
 	connection, err := amqp.Dial(url)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
@@ -40,8 +42,21 @@ func NewPublisher(cfg config.RabbitMQConfig) (*Publisher, error) {
 	}, nil
 }
 
-func (publisher *Publisher) Publish(ctx context.Context, exchange, routingKey string, body []byte) error {
-	err := publisher.channel.PublishWithContext(ctx,
+func (publisher *Publisher) Publish(ctx context.Context, exchange, exchangeType, routingKey string, dto any) error {
+	err := publisher.channel.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil)
+
+	if err != nil {
+		return fmt.Errorf("failed to declare exchange: %w", err)
+	}
+
+	var body []byte
+	body, err = json.Marshal(dto)
+
+	if err != nil {
+		return fmt.Errorf("failed to marshal dto: %w", err)
+	}
+
+	err = publisher.channel.PublishWithContext(ctx,
 		exchange,
 		routingKey,
 		false,

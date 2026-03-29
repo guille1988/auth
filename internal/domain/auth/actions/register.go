@@ -5,9 +5,9 @@ import (
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
-	"auth/internal/infrastructure/rabbitmq"
+	"auth/internal/infrastructure/providers/messaging"
 	"auth/internal/infrastructure/redis"
-	"auth/internal/shared/events"
+	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"time"
 
@@ -16,20 +16,20 @@ import (
 )
 
 type Register struct {
-	userRepository  userModel.Repository
-	redisRepository *redis.Repository
-	publisher       *rabbitmq.Publisher
-	jwtService      *services.JWTService
-	authConfig      config.AuthConfig
+	userRepository   userModel.Repository
+	redisRepository  *redis.Repository
+	rabbitMQProvider *messaging.RabbitMQRegister
+	jwtService       *services.JWTService
+	authConfig       config.AuthConfig
 }
 
-func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, publisher *rabbitmq.Publisher, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
+func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, rabbitMQProvider *messaging.RabbitMQRegister, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
 	return &Register{
-		userRepository:  userRepository,
-		redisRepository: redisRepository,
-		publisher:       publisher,
-		jwtService:      jwtService,
-		authConfig:      authConfig,
+		userRepository:   userRepository,
+		redisRepository:  redisRepository,
+		rabbitMQProvider: rabbitMQProvider,
+		jwtService:       jwtService,
+		authConfig:       authConfig,
 	}
 }
 
@@ -53,15 +53,7 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	event := events.NewUserRegistered(user.Email, user.Name)
-	var eventJson []byte
-	eventJson, err = event.ToJson()
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = action.publisher.Publish(context.Background(), event.Exchange(), event.RoutingKey(), eventJson)
+	err = action.rabbitMQProvider.Publish(context.Background(), dtos.WelcomeEmail{Email: user.Email, Name: user.Name})
 
 	if err != nil {
 		return nil, err

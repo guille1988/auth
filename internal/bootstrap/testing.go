@@ -51,8 +51,8 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 			_ = ctr.Redis.Close()
 		}
 
-		if ctr.Publisher != nil {
-			_ = ctr.Publisher.Close()
+		if ctr.RabbitMQProvider != nil {
+			_ = ctr.RabbitMQProvider.Close()
 		}
 
 		return nil

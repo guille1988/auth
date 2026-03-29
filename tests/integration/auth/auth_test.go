@@ -101,9 +101,11 @@ func TestAuthModule(test *testing.T) {
 		registerBody, _ := json.Marshal(registerPayload)
 		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
 		registerRequest.Header.Set("Content-Type", "application/json")
-		registerResp := integration.ExecuteRequest(registerRequest)
+		registerResponse := integration.ExecuteRequest(registerRequest)
 
-		cookies := registerResp.Result().Cookies()
+		assert.Equal(test, http.StatusCreated, registerResponse.Code)
+
+		cookies := registerResponse.Result().Cookies()
 
 		var refreshTokenCookie *http.Cookie
 		for _, cookie := range cookies {
@@ -115,17 +117,19 @@ func TestAuthModule(test *testing.T) {
 
 		assert.NotNil(test, refreshTokenCookie)
 
-		refreshReq, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
-		refreshReq.AddCookie(refreshTokenCookie)
+		if refreshTokenCookie != nil {
+			refreshReq, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
+			refreshReq.AddCookie(refreshTokenCookie)
 
-		response := integration.ExecuteRequest(refreshReq)
+			response := integration.ExecuteRequest(refreshReq)
 
-		assert.Equal(test, http.StatusOK, response.Code)
+			assert.Equal(test, http.StatusOK, response.Code)
 
-		var data map[string]any
-		_ = json.Unmarshal(response.Body.Bytes(), &data)
+			var data map[string]any
+			_ = json.Unmarshal(response.Body.Bytes(), &data)
 
-		assert.Contains(test, data, "access_token")
+			assert.Contains(test, data, "access_token")
+		}
 	})
 
 	integration.TestCase(test, "it should logout a user", func(test *testing.T) {
@@ -142,6 +146,8 @@ func TestAuthModule(test *testing.T) {
 		registerRequest.Header.Set("Content-Type", "application/json")
 		registerResp := integration.ExecuteRequest(registerRequest)
 
+		assert.Equal(test, http.StatusCreated, registerResp.Code)
+
 		cookies := registerResp.Result().Cookies()
 
 		var refreshTokenCookie *http.Cookie
@@ -154,17 +160,19 @@ func TestAuthModule(test *testing.T) {
 
 		assert.NotNil(test, refreshTokenCookie)
 
-		logoutRequest, _ := http.NewRequest("DELETE", "/api/auth/logout", nil)
-		logoutRequest.AddCookie(refreshTokenCookie)
+		if refreshTokenCookie != nil {
+			logoutRequest, _ := http.NewRequest("DELETE", "/api/auth/logout", nil)
+			logoutRequest.AddCookie(refreshTokenCookie)
 
-		response := integration.ExecuteRequest(logoutRequest)
-		assert.Equal(test, http.StatusNoContent, response.Code)
+			response := integration.ExecuteRequest(logoutRequest)
+			assert.Equal(test, http.StatusNoContent, response.Code)
 
-		refreshRequest, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
-		refreshRequest.AddCookie(refreshTokenCookie)
-		refreshResponse := integration.ExecuteRequest(refreshRequest)
+			refreshRequest, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
+			refreshRequest.AddCookie(refreshTokenCookie)
+			refreshResponse := integration.ExecuteRequest(refreshRequest)
 
-		assert.Equal(test, http.StatusUnauthorized, refreshResponse.Code)
+			assert.Equal(test, http.StatusUnauthorized, refreshResponse.Code)
+		}
 	})
 
 	integration.TestCase(test, "it should verify a user email", func(test *testing.T) {

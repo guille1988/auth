@@ -18,7 +18,7 @@ func RegisterRoutes(engine *gin.Engine, app *app.App) {
 	api := engine.Group("/api")
 
 	registers := []RouteRegister{
-		auth.NewModule(app.Container.DefaultConnection, app.Container.Redis, app.Container.Publisher, app.Config.Auth, app.Config.App.Env),
+		auth.NewModule(app.Container.DefaultConnection, app.Container.Redis, app.Container.RabbitMQProvider, app.Config.Auth, app.Config.App.Env),
 		user.NewModule(app.Container.DefaultConnection, *app.Config),
 	}
 

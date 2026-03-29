@@ -3,6 +3,7 @@ package container
 import (
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/database"
+	"auth/internal/infrastructure/providers/messaging"
 	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
 
@@ -13,7 +14,7 @@ import (
 type Container struct {
 	DefaultConnection *gorm.DB
 	Redis             *goredis.Client
-	Publisher         *rabbitmq.Publisher
+	RabbitMQProvider  *messaging.RabbitMQRegister
 }
 
 // New creates a new container with initialized database connections.
@@ -48,7 +49,7 @@ func (container *Container) InitPublisher(rabbitCfg config.RabbitMQConfig) error
 		return err
 	}
 
-	container.Publisher = publisher
+	container.RabbitMQProvider = messaging.NewRabbitMQRegister(publisher)
 
 	return nil
 }

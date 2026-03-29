@@ -58,9 +58,10 @@ func NewApi() (*app.App, error) {
 			return ctr.Redis.Close()
 		},
 		func() error {
-			if ctr.Publisher != nil {
-				return ctr.Publisher.Close()
+			if ctr.RabbitMQProvider != nil {
+				return ctr.RabbitMQProvider.Close()
 			}
+
 			return nil
 		},
 	)
