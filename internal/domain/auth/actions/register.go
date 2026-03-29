@@ -2,12 +2,12 @@ package actions
 
 import (
 	"auth/internal/domain/auth/data"
-	"auth/internal/domain/auth/events"
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
+	"auth/internal/shared/events"
 	"context"
 	"time"
 
@@ -53,7 +53,7 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	event := events.NewUserRegisteredEvent(user.Email, user.Name)
+	event := events.NewUserRegistered(user.Email, user.Name)
 	var eventJson []byte
 	eventJson, err = event.ToJson()
 
@@ -61,7 +61,11 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	_ = action.publisher.Publish(context.Background(), "", event.GetRoutingKey(), eventJson)
+	err = action.publisher.Publish(context.Background(), "", event.RoutingKey(), eventJson)
+
+	if err != nil {
+		return nil, err
+	}
 
 	refreshToken := uuid.New().String()
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
