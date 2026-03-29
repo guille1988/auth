@@ -14,6 +14,10 @@ func NewUserRegistered(email, name string) *UserRegistered {
 	}
 }
 
+func (event *UserRegistered) Exchange() string {
+	return "user.events"
+}
+
 func (event *UserRegistered) RoutingKey() string {
 	return "user.registered"
 }

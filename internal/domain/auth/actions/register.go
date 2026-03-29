@@ -61,7 +61,7 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	err = action.publisher.Publish(context.Background(), "", event.RoutingKey(), eventJson)
+	err = action.publisher.Publish(context.Background(), event.Exchange(), event.RoutingKey(), eventJson)
 
 	if err != nil {
 		return nil, err
