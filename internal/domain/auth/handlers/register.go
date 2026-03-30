@@ -8,7 +8,6 @@ import (
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/exceptions"
-	"auth/internal/infrastructure/providers/messaging"
 	"auth/internal/infrastructure/redis"
 	"auth/internal/infrastructure/validator"
 	"errors"
@@ -22,10 +21,10 @@ type RegisterHandler struct {
 	env            config.Env
 }
 
-func NewRegister(redisRepository *redis.Repository, rabbitMQProvider *messaging.RabbitMQRegister, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *RegisterHandler {
+func NewRegister(redisRepository *redis.Repository, publisher actions.MessagePublisher, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *RegisterHandler {
 	return &RegisterHandler{
 		userRepository: userRepository,
-		registerAction: actions.NewRegister(userRepository, redisRepository, rabbitMQProvider, jwtService, authConfig),
+		registerAction: actions.NewRegister(userRepository, redisRepository, publisher, jwtService, authConfig),
 		env:            env,
 	}
 }
@@ -52,7 +51,7 @@ func (handler *RegisterHandler) Handle(context *gin.Context) {
 	}
 
 	var response *services.TokenResponse
-	response, err = handler.registerAction.Execute(registerData, context.GetHeader("User-Agent"))
+	response, err = handler.registerAction.Execute(context.Request.Context(), registerData, context.GetHeader("User-Agent"))
 
 	if err != nil {
 		exceptions.NewServer(context, handler.env).Throw(err)

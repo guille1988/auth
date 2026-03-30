@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"auth/internal/infrastructure/rabbitmq"
-	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"fmt"
 	"reflect"
@@ -20,24 +19,27 @@ type RabbitMQRegister struct {
 }
 
 func NewRabbitMQRegister(publisher *rabbitmq.Publisher) *RabbitMQRegister {
-	provider := &RabbitMQRegister{
+	return &RabbitMQRegister{
 		publisher: publisher,
 		routes:    make(map[reflect.Type]Route),
 	}
-
-	provider.routes[reflect.TypeFor[dtos.WelcomeEmail]()] = Route{
-		Exchange:     "auth.events",
-		RoutingKey:   "user.created",
-		ExchangeType: "topic",
-	}
-
-	return provider
 }
 
-func (provider *RabbitMQRegister) Close() error {
-	if provider.publisher != nil {
-		return provider.publisher.Close()
+func (provider *RabbitMQRegister) Register(dto any, route Route) error {
+	dtoType := reflect.TypeOf(dto)
+
+	if dtoType.Kind() == reflect.Ptr {
+		dtoType = dtoType.Elem()
 	}
+
+	err := provider.publisher.DeclareExchange(route.Exchange, route.ExchangeType)
+
+	if err != nil {
+		return fmt.Errorf("failed to declare exchange for %T: %w", dto, err)
+	}
+
+	provider.routes[dtoType] = route
+
 	return nil
 }
 
@@ -51,8 +53,16 @@ func (provider *RabbitMQRegister) Publish(ctx context.Context, dto any) error {
 	route, ok := provider.routes[dtoType]
 
 	if !ok {
-		return fmt.Errorf("no route registered for %T", dtoType)
+		return fmt.Errorf("no route registered for %T", dto)
 	}
 
-	return provider.publisher.Publish(ctx, route.Exchange, route.ExchangeType, route.RoutingKey, dto)
+	return provider.publisher.Publish(ctx, route.Exchange, route.RoutingKey, dto)
+}
+
+func (provider *RabbitMQRegister) Close() error {
+	if provider.publisher != nil {
+		return provider.publisher.Close()
+	}
+
+	return nil
 }

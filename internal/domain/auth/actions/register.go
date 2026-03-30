@@ -5,7 +5,6 @@ import (
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
-	"auth/internal/infrastructure/providers/messaging"
 	"auth/internal/infrastructure/redis"
 	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
@@ -15,25 +14,29 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type Register struct {
-	userRepository   userModel.Repository
-	redisRepository  *redis.Repository
-	rabbitMQProvider *messaging.RabbitMQRegister
-	jwtService       *services.JWTService
-	authConfig       config.AuthConfig
+type MessagePublisher interface {
+	Publish(ctx context.Context, dto any) error
 }
 
-func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, rabbitMQProvider *messaging.RabbitMQRegister, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
+type Register struct {
+	userRepository  userModel.Repository
+	redisRepository *redis.Repository
+	publisher       MessagePublisher
+	jwtService      *services.JWTService
+	authConfig      config.AuthConfig
+}
+
+func NewRegister(userRepository userModel.Repository, redisRepository *redis.Repository, publisher MessagePublisher, jwtService *services.JWTService, authConfig config.AuthConfig) *Register {
 	return &Register{
-		userRepository:   userRepository,
-		redisRepository:  redisRepository,
-		rabbitMQProvider: rabbitMQProvider,
-		jwtService:       jwtService,
-		authConfig:       authConfig,
+		userRepository:  userRepository,
+		redisRepository: redisRepository,
+		publisher:       publisher,
+		jwtService:      jwtService,
+		authConfig:      authConfig,
 	}
 }
 
-func (action *Register) Execute(regData data.Register, device string) (*services.TokenResponse, error) {
+func (action *Register) Execute(ctx context.Context, regData data.Register, device string) (*services.TokenResponse, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(regData.Password), bcrypt.DefaultCost)
 
 	if err != nil {
@@ -53,7 +56,7 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		return nil, err
 	}
 
-	err = action.rabbitMQProvider.Publish(context.Background(), dtos.WelcomeEmail{Email: user.Email, Name: user.Name})
+	err = action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name})
 
 	if err != nil {
 		return nil, err
@@ -67,7 +70,7 @@ func (action *Register) Execute(regData data.Register, device string) (*services
 		Device: device,
 	}
 
-	err = action.redisRepository.Set(context.Background(), "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
+	err = action.redisRepository.Set(ctx, "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
 
 	if err != nil {
 		return nil, err

@@ -24,17 +24,24 @@ func NewPublisher(cfg config.RabbitMQConfig) (*Publisher, error) {
 	}
 
 	var channel *amqp.Channel
+	var ok bool
+
+	defer func() {
+		if !ok {
+			if channel != nil {
+				_ = channel.Close()
+			}
+			_ = connection.Close()
+		}
+	}()
+
 	channel, err = connection.Channel()
 
 	if err != nil {
-		err = connection.Close()
-
-		if err != nil {
-			return nil, err
-		}
-
 		return nil, fmt.Errorf("failed to open a channel: %w", err)
 	}
+
+	ok = true
 
 	return &Publisher{
 		connection: connection,
@@ -42,15 +49,12 @@ func NewPublisher(cfg config.RabbitMQConfig) (*Publisher, error) {
 	}, nil
 }
 
-func (publisher *Publisher) Publish(ctx context.Context, exchange, exchangeType, routingKey string, dto any) error {
-	err := publisher.channel.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil)
+func (publisher *Publisher) DeclareExchange(exchange, exchangeType string) error {
+	return publisher.channel.ExchangeDeclare(exchange, exchangeType, true, false, false, false, nil)
+}
 
-	if err != nil {
-		return fmt.Errorf("failed to declare exchange: %w", err)
-	}
-
-	var body []byte
-	body, err = json.Marshal(dto)
+func (publisher *Publisher) Publish(ctx context.Context, exchange, routingKey string, dto any) error {
+	body, err := json.Marshal(dto)
 
 	if err != nil {
 		return fmt.Errorf("failed to marshal dto: %w", err)
