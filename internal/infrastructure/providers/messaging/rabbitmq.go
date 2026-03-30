@@ -41,16 +41,18 @@ func (provider *RabbitMQRegister) Close() error {
 	return nil
 }
 
-func (provider *RabbitMQRegister) Publish(ctx context.Context, event any) error {
-	t := reflect.TypeOf(event)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
+func (provider *RabbitMQRegister) Publish(ctx context.Context, dto any) error {
+	dtoType := reflect.TypeOf(dto)
+
+	if dtoType.Kind() == reflect.Ptr {
+		dtoType = dtoType.Elem()
 	}
-	route, ok := provider.routes[t]
+
+	route, ok := provider.routes[dtoType]
 
 	if !ok {
-		return fmt.Errorf("no route registered for %T", event)
+		return fmt.Errorf("no route registered for %T", dtoType)
 	}
 
-	return provider.publisher.Publish(ctx, route.Exchange, route.ExchangeType, route.RoutingKey, event)
+	return provider.publisher.Publish(ctx, route.Exchange, route.ExchangeType, route.RoutingKey, dto)
 }
