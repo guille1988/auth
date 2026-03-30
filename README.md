@@ -119,6 +119,44 @@ Key configurations found in `.env`:
 
 ---
 
+### 📨 Messaging — Publishing a new message
+
+To publish a new message to RabbitMQ, follow these 3 steps without touching any messaging infrastructure files:
+
+**1. Create the DTO** in `internal/shared/messaging/rabbitmq/dtos/`:
+```go
+// internal/shared/messaging/rabbitmq/dtos/password_reset.go
+type PasswordReset struct {
+    Email string `json:"email"`
+    Token string `json:"token"`
+}
+```
+
+**2. Register the route** in `setupPublisher` inside `internal/bootstrap/api.go`:
+```go
+provider.Register(dtos.PasswordReset{}, messaging.Route{
+    Exchange:     "auth.events",
+    RoutingKey:   "user.password_reset",
+    ExchangeType: "topic",
+})
+```
+
+**3. Inject and publish** in your domain action. Depend on the `actions.MessagePublisher` interface and call `Publish`:
+```go
+type MyAction struct {
+    publisher actions.MessagePublisher
+    // ...
+}
+
+func (a *MyAction) Execute(ctx context.Context, ...) error {
+    return a.publisher.Publish(ctx, dtos.PasswordReset{Email: email, Token: token})
+}
+```
+
+No infrastructure files need to be modified.
+
+---
+
 ### 🧪 Testing
 
 Run tests using Docker to ensure a clean environment (uses Testcontainers for DB/Redis):
