@@ -4,9 +4,7 @@ import (
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/database"
 	"auth/internal/infrastructure/providers/messaging"
-	"auth/internal/infrastructure/rabbitmq"
 	"auth/internal/infrastructure/redis"
-	"auth/internal/shared/messaging/rabbitmq/dtos"
 
 	goredis "github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
@@ -40,30 +38,4 @@ func New(dbCfg config.DatabaseConfig, redisCfg config.RedisConfig) (*Container, 
 		DefaultConnection: defaultConnection,
 		Redis:             redisClient,
 	}, nil
-}
-
-// InitPublisher initializes the RabbitMQ publisher and registers known routes.
-func (container *Container) InitPublisher(rabbitCfg config.RabbitMQConfig) error {
-	publisher, err := rabbitmq.NewPublisher(rabbitCfg)
-
-	if err != nil {
-		return err
-	}
-
-	provider := messaging.NewRabbitMQRegister(publisher)
-
-	err = provider.Register(dtos.WelcomeEmail{}, messaging.Route{
-		Exchange:     "auth.events",
-		RoutingKey:   "user.created",
-		ExchangeType: "topic",
-	})
-
-	if err != nil {
-		_ = publisher.Close()
-		return err
-	}
-
-	container.RabbitMQProvider = provider
-
-	return nil
 }

@@ -29,7 +29,7 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 		return nil, err
 	}
 
-	err = ctr.InitPublisher(cfg.RabbitMQ)
+	ctr.RabbitMQProvider, err = setupPublisher(cfg.RabbitMQ)
 
 	if err != nil {
 		return nil, err

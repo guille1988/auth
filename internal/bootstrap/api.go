@@ -7,6 +7,9 @@ import (
 	"auth/internal/infrastructure/logger"
 	"auth/internal/infrastructure/middlewares"
 	"auth/internal/infrastructure/providers"
+	"auth/internal/infrastructure/providers/messaging"
+	"auth/internal/infrastructure/rabbitmq"
+	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"errors"
 	"fmt"
@@ -40,7 +43,9 @@ func NewApi() (*app.App, error) {
 		return nil, err
 	}
 
-	if err = ctr.InitPublisher(cfg.RabbitMQ); err != nil {
+	ctr.RabbitMQProvider, err = setupPublisher(cfg.RabbitMQ)
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -67,6 +72,27 @@ func NewApi() (*app.App, error) {
 	)
 
 	return appInstance, nil
+}
+
+func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, error) {
+	publisher, err := rabbitmq.NewPublisher(cfg)
+
+	if err != nil {
+		return nil, err
+	}
+
+	provider := messaging.NewRabbitMQRegister(publisher)
+
+	if err = provider.Register(dtos.WelcomeEmail{}, messaging.Route{
+		Exchange:     "auth.events",
+		RoutingKey:   "user.created",
+		ExchangeType: "topic",
+	}); err != nil {
+		_ = publisher.Close()
+		return nil, err
+	}
+
+	return provider, nil
 }
 
 // Run starts the api and manages its lifecycle.
