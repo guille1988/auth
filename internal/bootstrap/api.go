@@ -92,6 +92,15 @@ func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, err
 		return nil, err
 	}
 
+	if err = provider.Register(dtos.UserLoggedIn{}, messaging.Route{
+		Exchange:     "auth.events",
+		RoutingKey:   "user.logged_in",
+		ExchangeType: "topic",
+	}); err != nil {
+		_ = publisher.Close()
+		return nil, err
+	}
+
 	return provider, nil
 }
 

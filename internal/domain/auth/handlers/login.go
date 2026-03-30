@@ -19,9 +19,9 @@ type LoginHandler struct {
 	env         config.Env
 }
 
-func NewLogin(redisRepository *redis.Repository, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *LoginHandler {
+func NewLogin(redisRepository *redis.Repository, publisher actions.MessagePublisher, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *LoginHandler {
 	return &LoginHandler{
-		loginAction: actions.NewLogin(userRepository, redisRepository, jwtService, authConfig),
+		loginAction: actions.NewLogin(userRepository, redisRepository, jwtService, authConfig, publisher),
 		env:         env,
 	}
 }

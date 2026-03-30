@@ -6,6 +6,7 @@ import (
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/redis"
+	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"errors"
 	"time"
@@ -19,14 +20,16 @@ type Login struct {
 	redisRepository *redis.Repository
 	jwtService      *services.JWTService
 	authConfig      config.AuthConfig
+	publisher       MessagePublisher
 }
 
-func NewLogin(userRepository userModel.Repository, redisRepository *redis.Repository, jwtService *services.JWTService, authConfig config.AuthConfig) *Login {
+func NewLogin(userRepository userModel.Repository, redisRepository *redis.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, publisher MessagePublisher) *Login {
 	return &Login{
 		userRepository:  userRepository,
 		redisRepository: redisRepository,
 		jwtService:      jwtService,
 		authConfig:      authConfig,
+		publisher:       publisher,
 	}
 }
 
@@ -52,6 +55,12 @@ func (action *Login) Execute(loginData data.Login, device string) (*services.Tok
 	}
 
 	err = action.redisRepository.Set(context.Background(), "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = action.publisher.Publish(context.Background(), dtos.UserLoggedIn{Email: user.Email, Name: user.Name})
 
 	if err != nil {
 		return nil, err
