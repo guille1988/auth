@@ -6,6 +6,7 @@ import (
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/middlewares"
 	"auth/internal/infrastructure/redis"
 
 	"github.com/gin-gonic/gin"
@@ -14,13 +15,13 @@ import (
 )
 
 type Module struct {
-	db               *gorm.DB
-	redisClient      *goredis.Client
-	publisher        actions.MessagePublisher
-	userRepository   userModel.Repository
-	jwtService       *services.JWTService
-	authConfig       config.AuthConfig
-	env              config.Env
+	db             *gorm.DB
+	redisClient    *goredis.Client
+	publisher      actions.MessagePublisher
+	userRepository userModel.Repository
+	jwtService     *services.JWTService
+	authConfig     config.AuthConfig
+	env            config.Env
 }
 
 func NewModule(db *gorm.DB, redisClient *goredis.Client, publisher actions.MessagePublisher, authConfig config.AuthConfig, env config.Env) *Module {
@@ -39,6 +40,11 @@ func (module *Module) Register(group *gin.RouterGroup) {
 	redisRepo := redis.NewRepository(module.redisClient)
 	auth := group.Group("/auth")
 	{
+		protected := auth.Group("", middlewares.AuthMiddleware(module.authConfig, module.env))
+		{
+			protected.GET("/validate", handlers.NewValidate().Handle)
+		}
+
 		auth.POST("/register", handlers.NewRegister(redisRepo, module.publisher, module.userRepository, module.jwtService, module.authConfig, module.env).Handle)
 		auth.POST("/login", handlers.NewLogin(redisRepo, module.publisher, module.userRepository, module.jwtService, module.authConfig, module.env).Handle)
 		auth.POST("/refresh", handlers.NewRefresh(redisRepo, module.userRepository, module.jwtService, module.authConfig, module.env).Handle)

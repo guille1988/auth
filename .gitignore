@@ -1,5 +1,4 @@
 .idea
-.env
 bin/*
 !bin/.gitkeep
 .DS_Store
