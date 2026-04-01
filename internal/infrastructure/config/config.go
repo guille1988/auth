@@ -44,6 +44,7 @@ type AuthConfig struct {
 	AccessTokenExpire       time.Duration
 	RefreshTokenExpire      time.Duration
 	EmailVerificationExpire time.Duration
+	FrontendURL             string
 }
 
 type ConnectionName string
@@ -149,6 +150,7 @@ func New() (*Config, error) {
 			AccessTokenExpire:       time.Duration(env.GetEnvAsInt("AUTH_ACCESS_TOKEN_EXPIRE", 15)) * time.Minute,
 			RefreshTokenExpire:      time.Duration(env.GetEnvAsInt("AUTH_REFRESH_TOKEN_EXPIRE", 10080)) * time.Minute,
 			EmailVerificationExpire: time.Duration(env.GetEnvAsInt("AUTH_EMAIL_VERIFICATION_EXPIRE", 60)) * time.Minute,
+			FrontendURL:             env.GetEnvAsString("AUTH_FRONTEND_URL", "http://localhost:3000"),
 		},
 		RabbitMQ: RabbitMQConfig{
 			Host:     env.GetEnvAsString("RABBITMQ_HOST", "rabbitmq"),

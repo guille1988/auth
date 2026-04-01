@@ -8,5 +8,5 @@ import (
 )
 
 func NewUnauthorized(context *gin.Context, env config.Env) *Exception {
-	return newException(context, env, http.StatusUnauthorized, true)
+	return newException(context, env, http.StatusUnauthorized, false)
 }

@@ -2,6 +2,7 @@ package user
 
 import (
 	"auth/internal/domain/user/handlers"
+	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/middlewares"
 
@@ -26,6 +27,7 @@ func NewModule(db *gorm.DB, cfg config.Config) *Module {
 func (module *Module) Register(v1 *gin.RouterGroup) {
 	group := v1.Group("/users")
 	group.Use(middlewares.AuthMiddleware(module.config.Auth, module.env))
+	group.Use(middlewares.EnsureEmailVerified(userModel.NewRepository(module.db), module.env))
 	{
 		group.GET("/", handlers.NewIndex(module.db, module.env).Handle)
 		group.POST("/", handlers.NewStore(module.db, module.env).Handle)

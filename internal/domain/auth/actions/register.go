@@ -56,7 +56,16 @@ func (action *Register) Execute(ctx context.Context, regData data.Register, devi
 		return nil, err
 	}
 
-	err = action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name})
+	var verificationToken string
+	verificationToken, err = action.jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+	if err != nil {
+		return nil, err
+	}
+
+	verificationURL := action.authConfig.FrontendURL + "/verify-email?token=" + verificationToken
+
+	err = action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
 
 	if err != nil {
 		return nil, err

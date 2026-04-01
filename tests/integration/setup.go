@@ -2,6 +2,8 @@ package integration
 
 import (
 	"auth/internal/bootstrap"
+	"auth/internal/domain/auth/services"
+	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/app"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/database"
@@ -177,11 +179,12 @@ func TestCase(test *testing.T, name string, testFunction func(test *testing.T)) 
 	})
 }
 
-// GetToken registers a user and returns their access token.
+// GetToken registers a user, verifies their email, and returns their access token.
 func GetToken() string {
+	email := "test@example.com"
 	payload := map[string]string{
 		"name":     "Test User",
-		"email":    "test@example.com",
+		"email":    email,
 		"password": "password123",
 	}
 	body, _ := json.Marshal(payload)
@@ -193,6 +196,18 @@ func GetToken() string {
 
 	var data map[string]any
 	_ = json.Unmarshal(response.Body.Bytes(), &data)
+
+	appInstance, _ := GetApp()
+	userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
+	user, _ := userRepo.FindByEmail(email)
+	jwtService := services.NewJWTService(appInstance.Config.Auth)
+	verificationToken, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+	verifyPayload := map[string]string{"token": verificationToken}
+	verifyBody, _ := json.Marshal(verifyPayload)
+	verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+	verifyRequest.Header.Set("Content-Type", "application/json")
+	ExecuteRequest(verifyRequest)
 
 	return data["access_token"].(string)
 }
