@@ -189,17 +189,14 @@ func TestAuthModule(test *testing.T) {
 		registerRequest.Header.Set("Content-Type", "application/json")
 		integration.ExecuteRequest(registerRequest)
 
-		// Buscar el usuario para obtener su UUID
 		appInstance, err := integration.GetApp()
 		assert.NoError(test, err)
 		userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
 		user, _ := userRepo.FindByEmail(email)
 
-		// Generar un token de verificación usando el servicio
 		jwtService := services.NewJWTService(appInstance.Config.Auth)
 		token, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
 
-		// Verificar el email
 		verifyPayload := map[string]string{
 			"token": token,
 		}
@@ -209,9 +206,8 @@ func TestAuthModule(test *testing.T) {
 
 		response := integration.ExecuteRequest(verifyReq)
 
-		assert.Equal(test, http.StatusOK, response.Code)
+		assert.Equal(test, http.StatusNoContent, response.Code)
 
-		// Verificar en la DB que email_verified_at no sea null
 		updatedUser, _ := userRepo.FindByEmail(email)
 		assert.NotNil(test, updatedUser.EmailVerifiedAt)
 	})

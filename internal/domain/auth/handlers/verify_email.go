@@ -38,5 +38,5 @@ func (handler *VerifyEmailHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	context.JSON(http.StatusOK, gin.H{"message": "Email verified successfully"})
+	context.Status(http.StatusNoContent)
 }
