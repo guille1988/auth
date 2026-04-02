@@ -40,11 +40,7 @@ func (module *Module) Register(group *gin.RouterGroup) {
 	redisRepo := redis.NewRepository(module.redisClient)
 	auth := group.Group("/auth")
 	{
-		protected := auth.Group(
-			"",
-			middlewares.AuthMiddleware(module.authConfig, module.env),
-			middlewares.EnsureEmailVerified(module.userRepository, module.env),
-		)
+		protected := middlewares.ProtectedGroup(auth, module.authConfig, module.userRepository, module.env)
 		{
 			protected.GET("/validate", handlers.NewValidate().Handle)
 		}

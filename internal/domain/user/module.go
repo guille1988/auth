@@ -25,9 +25,7 @@ func NewModule(db *gorm.DB, cfg config.Config) *Module {
 }
 
 func (module *Module) Register(v1 *gin.RouterGroup) {
-	group := v1.Group("/users")
-	group.Use(middlewares.AuthMiddleware(module.config.Auth, module.env))
-	group.Use(middlewares.EnsureEmailVerified(userModel.NewRepository(module.db), module.env))
+	group := middlewares.ProtectedGroup(v1.Group("/users"), module.config.Auth, userModel.NewRepository(module.db), module.env)
 	{
 		group.GET("/", handlers.NewIndex(module.db, module.env).Handle)
 		group.POST("/", handlers.NewStore(module.db, module.env).Handle)

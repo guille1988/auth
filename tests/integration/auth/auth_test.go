@@ -108,6 +108,7 @@ func TestAuthModule(test *testing.T) {
 		cookies := registerResponse.Result().Cookies()
 
 		var refreshTokenCookie *http.Cookie
+
 		for _, cookie := range cookies {
 			if cookie.Name == "refresh_token" {
 				refreshTokenCookie = cookie
@@ -151,6 +152,7 @@ func TestAuthModule(test *testing.T) {
 		cookies := registerResp.Result().Cookies()
 
 		var refreshTokenCookie *http.Cookie
+
 		for _, cookie := range cookies {
 			if cookie.Name == "refresh_token" {
 				refreshTokenCookie = cookie
@@ -173,6 +175,30 @@ func TestAuthModule(test *testing.T) {
 
 			assert.Equal(test, http.StatusUnauthorized, refreshResponse.Code)
 		}
+	})
+
+	integration.TestCase(test, "it should return forbidden status code when email is not verified", func(test *testing.T) {
+		payload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    gofakeit.Email(),
+			"password": "password123",
+		}
+		body, _ := json.Marshal(payload)
+
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		registerResponse := integration.ExecuteRequest(registerRequest)
+
+		var data map[string]any
+		_ = json.Unmarshal(registerResponse.Body.Bytes(), &data)
+		accessToken := data["access_token"].(string)
+
+		validateRequest, _ := http.NewRequest("GET", "/api/auth/validate", nil)
+		validateRequest.Header.Set("Authorization", "Bearer "+accessToken)
+
+		response := integration.ExecuteRequest(validateRequest)
+
+		assert.Equal(test, http.StatusForbidden, response.Code)
 	})
 
 	integration.TestCase(test, "it should verify a user email", func(test *testing.T) {
