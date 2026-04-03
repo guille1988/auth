@@ -46,8 +46,11 @@ func (action *Login) Execute(loginData data.Login, device string) (*services.Tok
 		return nil, errors.New("invalid credentials")
 	}
 
+	now := time.Now()
+	_ = action.userRepository.Update(user, map[string]any{"last_login_at": now})
+
 	refreshToken := uuid.New().String()
-	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
+	expiresAt := now.Add(action.authConfig.RefreshTokenExpire)
 
 	sessionData := data.RefreshToken{
 		UserID: user.ID,

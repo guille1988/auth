@@ -87,6 +87,13 @@ func TestAuthModule(test *testing.T) {
 		}
 
 		assert.True(test, found, "refresh_token cookie not found")
+
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+
+		userRepository := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepository.FindByEmail(email)
+		assert.NotNil(test, user.LastLoginAt)
 	})
 
 	integration.TestCase(test, "it should refresh token", func(test *testing.T) {
