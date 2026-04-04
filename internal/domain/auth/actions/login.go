@@ -15,6 +15,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+var ErrEmailNotVerified = errors.New("email not verified")
+
 type Login struct {
 	userRepository  userModel.Repository
 	redisRepository *redis.Repository
@@ -44,6 +46,10 @@ func (action *Login) Execute(loginData data.Login, device string) (*services.Tok
 
 	if err != nil {
 		return nil, errors.New("invalid credentials")
+	}
+
+	if user.EmailVerifiedAt == nil {
+		return nil, ErrEmailNotVerified
 	}
 
 	now := time.Now()

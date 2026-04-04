@@ -59,15 +59,29 @@ func TestAuthModule(test *testing.T) {
 		registerRequest.Header.Set("Content-Type", "application/json")
 		integration.ExecuteRequest(registerRequest)
 
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+
+		userRepository := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepository.FindByEmail(email)
+		jwtService := services.NewJWTService(appInstance.Config.Auth)
+		verificationToken, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+		verifyPayload := map[string]string{"token": verificationToken}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(verifyRequest)
+
 		loginPayload := map[string]string{
 			"email":    email,
 			"password": password,
 		}
 		loginBody, _ := json.Marshal(loginPayload)
-		loginReq, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(loginBody))
-		loginReq.Header.Set("Content-Type", "application/json")
+		loginRequest, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(loginBody))
+		loginRequest.Header.Set("Content-Type", "application/json")
 
-		response := integration.ExecuteRequest(loginReq)
+		response := integration.ExecuteRequest(loginRequest)
 
 		assert.Equal(test, http.StatusOK, response.Code)
 
@@ -88,12 +102,35 @@ func TestAuthModule(test *testing.T) {
 
 		assert.True(test, found, "refresh_token cookie not found")
 
-		appInstance, err := integration.GetApp()
-		assert.NoError(test, err)
+		updatedUser, _ := userRepository.FindByEmail(email)
+		assert.NotNil(test, updatedUser.LastLoginAt)
+	})
 
-		userRepository := userModel.NewRepository(appInstance.Container.DefaultConnection)
-		user, _ := userRepository.FindByEmail(email)
-		assert.NotNil(test, user.LastLoginAt)
+	integration.TestCase(test, "it should return 403 when logging in with unverified email", func(test *testing.T) {
+		email := gofakeit.Email()
+		password := "password123"
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": password,
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(registerRequest)
+
+		loginPayload := map[string]string{
+			"email":    email,
+			"password": password,
+		}
+		loginBody, _ := json.Marshal(loginPayload)
+		loginRequest, _ := http.NewRequest("POST", "/api/auth/login", bytes.NewBuffer(loginBody))
+		loginRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(loginRequest)
+
+		assert.Equal(test, http.StatusForbidden, response.Code)
 	})
 
 	integration.TestCase(test, "it should refresh token", func(test *testing.T) {
@@ -126,10 +163,10 @@ func TestAuthModule(test *testing.T) {
 		assert.NotNil(test, refreshTokenCookie)
 
 		if refreshTokenCookie != nil {
-			refreshReq, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
-			refreshReq.AddCookie(refreshTokenCookie)
+			refreshRequest, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
+			refreshRequest.AddCookie(refreshTokenCookie)
 
-			response := integration.ExecuteRequest(refreshReq)
+			response := integration.ExecuteRequest(refreshRequest)
 
 			assert.Equal(test, http.StatusOK, response.Code)
 
@@ -234,14 +271,102 @@ func TestAuthModule(test *testing.T) {
 			"token": token,
 		}
 		verifyBody, _ := json.Marshal(verifyPayload)
-		verifyReq, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
-		verifyReq.Header.Set("Content-Type", "application/json")
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
 
-		response := integration.ExecuteRequest(verifyReq)
+		response := integration.ExecuteRequest(verifyRequest)
 
 		assert.Equal(test, http.StatusNoContent, response.Code)
 
 		updatedUser, _ := userRepo.FindByEmail(email)
 		assert.NotNil(test, updatedUser.EmailVerifiedAt)
+	})
+
+	integration.TestCase(test, "it should resend verification email", func(test *testing.T) {
+		email := gofakeit.Email()
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": "password123",
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(registerRequest)
+
+		resendPayload := map[string]string{"email": email}
+		resendBody, _ := json.Marshal(resendPayload)
+		resendRequest, _ := http.NewRequest("POST", "/api/auth/resend-verification", bytes.NewBuffer(resendBody))
+		resendRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(resendRequest)
+
+		assert.Equal(test, http.StatusNoContent, response.Code)
+
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+		userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepo.FindByEmail(email)
+
+		jwtService := services.NewJWTService(appInstance.Config.Auth)
+		newToken, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+		verifyPayload := map[string]string{"token": newToken}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(verifyRequest)
+
+		updatedUser, _ := userRepo.FindByEmail(email)
+		assert.NotNil(test, updatedUser.EmailVerifiedAt)
+	})
+
+	integration.TestCase(test, "it should succeed silently when resending for already verified email", func(test *testing.T) {
+		email := gofakeit.Email()
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": "password123",
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(registerRequest)
+
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+		userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepo.FindByEmail(email)
+
+		jwtService := services.NewJWTService(appInstance.Config.Auth)
+		token, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+		verifyPayload := map[string]string{"token": token}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(verifyRequest)
+
+		resendPayload := map[string]string{"email": email}
+		resendBody, _ := json.Marshal(resendPayload)
+		resendRequest, _ := http.NewRequest("POST", "/api/auth/resend-verification", bytes.NewBuffer(resendBody))
+		resendRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(resendRequest)
+
+		assert.Equal(test, http.StatusNoContent, response.Code)
+	})
+
+	integration.TestCase(test, "it should succeed silently when resending for non-existent email", func(test *testing.T) {
+		resendPayload := map[string]string{"email": gofakeit.Email()}
+		resendBody, _ := json.Marshal(resendPayload)
+		resendRequest, _ := http.NewRequest("POST", "/api/auth/resend-verification", bytes.NewBuffer(resendBody))
+		resendRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(resendRequest)
+
+		assert.Equal(test, http.StatusNoContent, response.Code)
 	})
 }

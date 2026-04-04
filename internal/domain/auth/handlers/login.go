@@ -10,6 +10,7 @@ import (
 	"auth/internal/infrastructure/exceptions"
 	"auth/internal/infrastructure/redis"
 	"auth/internal/infrastructure/validator"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,6 +36,11 @@ func (handler *LoginHandler) Handle(context *gin.Context) {
 	response, err := handler.loginAction.Execute(loginData, context.GetHeader("User-Agent"))
 
 	if err != nil {
+		if errors.Is(err, actions.ErrEmailNotVerified) {
+			exceptions.NewForbidden(context, handler.env).Throw(err)
+			return
+		}
+
 		exceptions.NewUnauthorized(context, handler.env).Throw(err)
 		return
 	}
