@@ -4,8 +4,9 @@ import (
 	"auth/internal/domain/auth/services"
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
-	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
+
+	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
 )
 
 type ResendVerificationEmail struct {

@@ -6,10 +6,11 @@ import (
 	userModel "auth/internal/domain/user/model"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/redis"
-	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"errors"
 	"time"
+
+	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"

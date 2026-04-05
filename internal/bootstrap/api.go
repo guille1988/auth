@@ -9,7 +9,6 @@ import (
 	"auth/internal/infrastructure/providers"
 	"auth/internal/infrastructure/providers/messaging"
 	"auth/internal/infrastructure/rabbitmq"
-	"auth/internal/shared/messaging/rabbitmq/dtos"
 	"context"
 	"errors"
 	"fmt"
@@ -19,6 +18,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
 
 	"github.com/gin-gonic/gin"
 )
@@ -76,7 +77,6 @@ func NewApi() (*app.App, error) {
 
 func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, error) {
 	publisher, err := rabbitmq.NewPublisher(cfg)
-
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +88,7 @@ func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, err
 		RoutingKey:   "user.created",
 		ExchangeType: "topic",
 	}); err != nil {
-		_ = publisher.Close()
+		_ = provider.Close()
 		return nil, err
 	}
 
@@ -97,7 +97,7 @@ func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, err
 		RoutingKey:   "user.logged_in",
 		ExchangeType: "topic",
 	}); err != nil {
-		_ = publisher.Close()
+		_ = provider.Close()
 		return nil, err
 	}
 
