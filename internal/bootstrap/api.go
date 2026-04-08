@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/guille1988/go-app-shared/messaging/rabbitmq/constants"
 	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
 
 	"github.com/gin-gonic/gin"
@@ -84,27 +85,27 @@ func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, err
 	provider := messaging.NewRabbitMQRegister(publisher)
 
 	if err = provider.Register(dtos.WelcomeEmail{}, messaging.Route{
-		Exchange:     "auth.events",
-		RoutingKey:   "user.created",
-		ExchangeType: "topic",
+		Exchange:     constants.ExchangeAuthEvents,
+		RoutingKey:   constants.RouteUserCreated,
+		ExchangeType: constants.ExchangeTypeTopic,
 	}); err != nil {
 		_ = provider.Close()
 		return nil, err
 	}
 
 	if err = provider.Register(dtos.UserLoggedIn{}, messaging.Route{
-		Exchange:     "auth.events",
-		RoutingKey:   "user.logged_in",
-		ExchangeType: "topic",
+		Exchange:     constants.ExchangeAuthEvents,
+		RoutingKey:   constants.RouteUserLoggedIn,
+		ExchangeType: constants.ExchangeTypeTopic,
 	}); err != nil {
 		_ = provider.Close()
 		return nil, err
 	}
 
 	if err = provider.Register(dtos.StressEmail{}, messaging.Route{
-		Exchange:     "auth.events",
-		RoutingKey:   "stress.test",
-		ExchangeType: "topic",
+		Exchange:     constants.ExchangeAuthEvents,
+		RoutingKey:   constants.RouteStressTest,
+		ExchangeType: constants.ExchangeTypeTopic,
 	}); err != nil {
 		_ = provider.Close()
 		return nil, err
