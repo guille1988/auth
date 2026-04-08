@@ -101,6 +101,15 @@ func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, err
 		return nil, err
 	}
 
+	if err = provider.Register(dtos.StressEmail{}, messaging.Route{
+		Exchange:     "auth.events",
+		RoutingKey:   "stress.test",
+		ExchangeType: "topic",
+	}); err != nil {
+		_ = provider.Close()
+		return nil, err
+	}
+
 	return provider, nil
 }
 
