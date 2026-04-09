@@ -29,7 +29,9 @@ func (handler *StressHandler) Handle(ctx *gin.Context) {
 		return
 	}
 
-	if err := handler.action.Execute(ctx.Request.Context(), stressData); err != nil {
+	err := handler.action.Execute(ctx.Request.Context(), stressData)
+
+	if err != nil {
 		exceptions.NewServer(ctx, handler.env).Throw(err)
 		return
 	}
