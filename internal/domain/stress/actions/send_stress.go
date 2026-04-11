@@ -4,7 +4,7 @@ import (
 	"auth/internal/domain/stress/data"
 	"context"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 )
 
 type MessagePublisher interface {

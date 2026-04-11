@@ -6,7 +6,7 @@ import (
 	"auth/internal/infrastructure/config"
 	"context"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 )
 
 type ResendVerificationEmail struct {

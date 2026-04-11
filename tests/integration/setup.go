@@ -19,7 +19,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/testcontainers/testcontainers-go/modules/mysql"
-	"github.com/testcontainers/testcontainers-go/modules/rabbitmq"
 	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
@@ -33,7 +32,6 @@ func RunTests(test *testing.M) {
 	TestConfig = setupConfig()
 	mysqlInstance := setupDatabaseContainer(ctx, TestConfig)
 	redisInstance := setupRedisContainer(ctx, TestConfig)
-	rabbitInstance := setupRabbitContainer(ctx, TestConfig)
 
 	setupApplication(TestConfig)
 
@@ -41,7 +39,6 @@ func RunTests(test *testing.M) {
 
 	_ = mysqlInstance.Terminate(ctx)
 	_ = redisInstance.Terminate(ctx)
-	_ = rabbitInstance.Terminate(ctx)
 	os.Exit(code)
 }
 
@@ -100,30 +97,6 @@ func setupRedisContainer(ctx context.Context, cfg *config.Config) *redis.RedisCo
 	cfg.Redis.Port = port.Port()
 
 	return redisContainer
-}
-
-// setupRabbitContainer starts a RabbitMQ container and updates the configuration with dynamic connection details.
-func setupRabbitContainer(ctx context.Context, cfg *config.Config) *rabbitmq.RabbitMQContainer {
-	rabbitContainer, err := rabbitmq.Run(ctx, "rabbitmq:3-management-alpine",
-		rabbitmq.WithAdminPassword(cfg.RabbitMQ.Password),
-		rabbitmq.WithAdminUsername(cfg.RabbitMQ.User),
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	if rabbitContainer == nil {
-		panic("rabbitContainer is nil, you should not see this")
-	}
-
-	host, _ := rabbitContainer.Host(ctx)
-	port, _ := rabbitContainer.MappedPort(ctx, nat.Port(cfg.RabbitMQ.Port))
-
-	cfg.RabbitMQ.Host = host
-	cfg.RabbitMQ.Port = port.Port()
-
-	return rabbitContainer
 }
 
 // setupApplication initializes the API instance, runs database migrations, and sets the global test handler.

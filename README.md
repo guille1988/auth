@@ -121,11 +121,11 @@ Key configurations found in `.env`:
 
 ### 📨 Messaging — Publishing a new message
 
-To publish a new message to RabbitMQ, follow these 3 steps without touching any messaging infrastructure files:
+To publish a new message to Kafka, follow these 3 steps without touching any messaging infrastructure files:
 
-**1. Create the DTO** in `internal/shared/messaging/rabbitmq/dtos/`:
+**1. Create the DTO** in `internal/shared/messaging/kafka/dtos/`:
 ```go
-// internal/shared/messaging/rabbitmq/dtos/password_reset.go
+// internal/shared/messaging/kafka/dtos/password_reset.go
 type PasswordReset struct {
     Email string `json:"email"`
     Token string `json:"token"`
@@ -134,10 +134,8 @@ type PasswordReset struct {
 
 **2. Register the route** in `setupPublisher` inside `internal/bootstrap/api.go`:
 ```go
-provider.Register(dtos.PasswordReset{}, messaging.Route{
-    Exchange:     "auth.events",
-    RoutingKey:   "user.password_reset",
-    ExchangeType: "topic",
+publisher.Register(dtos.PasswordReset{}, messaging.Route{
+    RoutingKey: "user.password_reset",
 })
 ```
 

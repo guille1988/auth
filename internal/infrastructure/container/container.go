@@ -13,7 +13,7 @@ import (
 type Container struct {
 	DefaultConnection *gorm.DB
 	Redis             *goredis.Client
-	RabbitMQProvider  *messaging.RabbitMQRegister
+	Publisher         messaging.MessagingPublisher
 }
 
 // New creates a new container with initialized database connections.

@@ -29,7 +29,7 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 		return nil, err
 	}
 
-	ctr.RabbitMQProvider, err = setupPublisher(cfg.RabbitMQ)
+	ctr.Publisher, err = setupPublisher(cfg.Kafka)
 
 	if err != nil {
 		return nil, err
@@ -51,8 +51,8 @@ func NewTestingApi(cfg *config.Config) (*app.App, error) {
 			_ = ctr.Redis.Close()
 		}
 
-		if ctr.RabbitMQProvider != nil {
-			_ = ctr.RabbitMQProvider.Close()
+		if ctr.Publisher != nil {
+			_ = ctr.Publisher.Close()
 		}
 
 		return nil

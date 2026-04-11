@@ -10,7 +10,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
