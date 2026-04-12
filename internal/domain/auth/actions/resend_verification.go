@@ -41,5 +41,5 @@ func (action *ResendVerificationEmail) Execute(ctx context.Context, email string
 
 	verificationURL := action.authConfig.FrontendURL + "/verify-email?token=" + verificationToken
 
-	return action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
+	return action.publisher.Publish(dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
 }

@@ -75,7 +75,7 @@ func NewApi() (*app.App, error) {
 	return appInstance, nil
 }
 
-func setupPublisher(cfg config.KafkaConfig) (messaging.MessagingPublisher, error) {
+func setupPublisher(cfg config.KafkaConfig) (messaging.Publisher, error) {
 	publisher := messaging.NewKafkaPublisher(cfg.Brokers)
 
 	if err := publisher.Register(dtos.WelcomeEmail{}, messaging.Route{

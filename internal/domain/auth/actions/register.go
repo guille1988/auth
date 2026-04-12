@@ -16,7 +16,7 @@ import (
 )
 
 type MessagePublisher interface {
-	Publish(ctx context.Context, dto any) error
+	Publish(dto any) error
 }
 
 type Register struct {
@@ -66,7 +66,7 @@ func (action *Register) Execute(ctx context.Context, regData data.Register, devi
 
 	verificationURL := action.authConfig.FrontendURL + "/verify-email?token=" + verificationToken
 
-	err = action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
+	err = action.publisher.Publish(dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
 
 	if err != nil {
 		return nil, err

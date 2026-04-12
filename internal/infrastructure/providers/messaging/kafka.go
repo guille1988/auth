@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -15,8 +16,8 @@ type Route struct {
 	ExchangeType string
 }
 
-type MessagingPublisher interface {
-	Publish(ctx context.Context, dto any) error
+type Publisher interface {
+	Publish(dto any) error
 	Close() error
 }
 
@@ -33,6 +34,7 @@ func NewKafkaPublisher(brokers string) *KafkaPublisher {
 	if err != nil {
 		panic(fmt.Sprintf("failed to create kafka client: %v", err))
 	}
+
 	return &KafkaPublisher{
 		client: client,
 		topics: make(map[reflect.Type]string),
@@ -47,11 +49,12 @@ func (publisher *KafkaPublisher) Register(dto any, route Route) error {
 	}
 
 	publisher.topics[t] = route.RoutingKey
+
 	return nil
 }
 
 // Publish is fire-and-forget (async produce).
-func (publisher *KafkaPublisher) Publish(ctx context.Context, dto any) error {
+func (publisher *KafkaPublisher) Publish(dto any) error {
 	t := reflect.TypeOf(dto)
 
 	if t.Kind() == reflect.Ptr {
@@ -70,7 +73,15 @@ func (publisher *KafkaPublisher) Publish(ctx context.Context, dto any) error {
 		return err
 	}
 
-	publisher.client.Produce(context.Background(), &kgo.Record{Topic: topic, Value: body}, nil)
+	publisher.client.Produce(
+		context.Background(),
+		&kgo.Record{Topic: topic, Value: body},
+		func(record *kgo.Record, err error) {
+			if err != nil {
+				slog.Error("kafka produce failed", "topic", record.Topic, "error", err)
+			}
+		},
+	)
 
 	return nil
 }
