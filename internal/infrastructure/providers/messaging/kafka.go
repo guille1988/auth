@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 )
@@ -18,6 +19,7 @@ type Route struct {
 
 type Publisher interface {
 	Publish(dto any) error
+	Flush(ctx context.Context) error
 	Close() error
 }
 
@@ -30,6 +32,8 @@ func NewKafkaPublisher(brokers string) *KafkaPublisher {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers),
 		kgo.AllowAutoTopicCreation(),
+		kgo.RecordRetries(10),
+		kgo.ProduceRequestTimeout(30*time.Second),
 	)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create kafka client: %v", err))
@@ -84,6 +88,10 @@ func (publisher *KafkaPublisher) Publish(dto any) error {
 	)
 
 	return nil
+}
+
+func (publisher *KafkaPublisher) Flush(ctx context.Context) error {
+	return publisher.client.Flush(ctx)
 }
 
 func (publisher *KafkaPublisher) Close() error {

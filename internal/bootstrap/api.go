@@ -65,6 +65,15 @@ func NewApi() (*app.App, error) {
 		},
 		func() error {
 			if ctr.Publisher != nil {
+				flushCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+
+				err = ctr.Publisher.Flush(flushCtx)
+
+				if err != nil {
+					slog.Error("kafka flush on shutdown failed", "error", err)
+				}
+
 				return ctr.Publisher.Close()
 			}
 
@@ -159,7 +168,7 @@ func wait(srv *http.Server, serverErrors chan error) error {
 
 // shutdownServer concern: Specific logic to stop the HTTP server gracefully.
 func shutdownServer(srv *http.Server) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
