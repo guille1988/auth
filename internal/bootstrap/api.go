@@ -8,7 +8,6 @@ import (
 	"auth/internal/infrastructure/middlewares"
 	"auth/internal/infrastructure/providers"
 	"auth/internal/infrastructure/providers/messaging"
-	"auth/internal/infrastructure/rabbitmq"
 	"context"
 	"errors"
 	"fmt"
@@ -19,8 +18,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/constants"
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/constants"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,7 +44,7 @@ func NewApi() (*app.App, error) {
 		return nil, err
 	}
 
-	ctr.RabbitMQProvider, err = setupPublisher(cfg.RabbitMQ)
+	ctr.Publisher, err = setupPublisher(cfg.Kafka)
 
 	if err != nil {
 		return nil, err
@@ -65,8 +64,17 @@ func NewApi() (*app.App, error) {
 			return ctr.Redis.Close()
 		},
 		func() error {
-			if ctr.RabbitMQProvider != nil {
-				return ctr.RabbitMQProvider.Close()
+			if ctr.Publisher != nil {
+				flushCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+				defer cancel()
+
+				err = ctr.Publisher.Flush(flushCtx)
+
+				if err != nil {
+					slog.Error("kafka flush on shutdown failed", "error", err)
+				}
+
+				return ctr.Publisher.Close()
 			}
 
 			return nil
@@ -76,42 +84,31 @@ func NewApi() (*app.App, error) {
 	return appInstance, nil
 }
 
-func setupPublisher(cfg config.RabbitMQConfig) (*messaging.RabbitMQRegister, error) {
-	publisher, err := rabbitmq.NewPublisher(cfg)
-	if err != nil {
-		return nil, err
-	}
+func setupPublisher(cfg config.KafkaConfig) (messaging.Publisher, error) {
+	publisher := messaging.NewKafkaPublisher(cfg.Brokers)
 
-	provider := messaging.NewRabbitMQRegister(publisher)
-
-	if err = provider.Register(dtos.WelcomeEmail{}, messaging.Route{
-		Exchange:     constants.ExchangeAuthEvents,
-		RoutingKey:   constants.RouteUserCreated,
-		ExchangeType: constants.ExchangeTypeTopic,
+	if err := publisher.Register(dtos.WelcomeEmail{}, messaging.Route{
+		RoutingKey: constants.RouteUserCreated,
 	}); err != nil {
-		_ = provider.Close()
+		_ = publisher.Close()
 		return nil, err
 	}
 
-	if err = provider.Register(dtos.UserLoggedIn{}, messaging.Route{
-		Exchange:     constants.ExchangeAuthEvents,
-		RoutingKey:   constants.RouteUserLoggedIn,
-		ExchangeType: constants.ExchangeTypeTopic,
+	if err := publisher.Register(dtos.UserLoggedIn{}, messaging.Route{
+		RoutingKey: constants.RouteUserLoggedIn,
 	}); err != nil {
-		_ = provider.Close()
+		_ = publisher.Close()
 		return nil, err
 	}
 
-	if err = provider.Register(dtos.StressEmail{}, messaging.Route{
-		Exchange:     constants.ExchangeAuthEvents,
-		RoutingKey:   constants.RouteStressTest,
-		ExchangeType: constants.ExchangeTypeTopic,
+	if err := publisher.Register(dtos.StressEmail{}, messaging.Route{
+		RoutingKey: constants.RouteStressTest,
 	}); err != nil {
-		_ = provider.Close()
+		_ = publisher.Close()
 		return nil, err
 	}
 
-	return provider, nil
+	return publisher, nil
 }
 
 // Run starts the api and manages its lifecycle.
@@ -171,7 +168,7 @@ func wait(srv *http.Server, serverErrors chan error) error {
 
 // shutdownServer concern: Specific logic to stop the HTTP server gracefully.
 func shutdownServer(srv *http.Server) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {

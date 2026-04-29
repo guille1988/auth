@@ -4,11 +4,11 @@ import (
 	"auth/internal/domain/stress/data"
 	"context"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 )
 
 type MessagePublisher interface {
-	Publish(ctx context.Context, dto any) error
+	Publish(dto any) error
 }
 
 type SendStress struct {
@@ -20,7 +20,7 @@ func NewSendStress(publisher MessagePublisher) *SendStress {
 }
 
 func (action *SendStress) Execute(ctx context.Context, stressData data.Stress) error {
-	return action.publisher.Publish(ctx, dtos.StressEmail{
+	return action.publisher.Publish(dtos.StressEmail{
 		Email: stressData.Email,
 		Name:  stressData.Name,
 	})

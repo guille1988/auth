@@ -10,7 +10,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -70,7 +70,7 @@ func (action *Login) Execute(loginData data.Login, device string) (*services.Tok
 		return nil, err
 	}
 
-	err = action.publisher.Publish(context.Background(), dtos.UserLoggedIn{Email: user.Email, Name: user.Name})
+	err = action.publisher.Publish(dtos.UserLoggedIn{Email: user.Email, Name: user.Name})
 
 	if err != nil {
 		return nil, err

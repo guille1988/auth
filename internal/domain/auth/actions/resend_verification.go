@@ -6,7 +6,7 @@ import (
 	"auth/internal/infrastructure/config"
 	"context"
 
-	"github.com/guille1988/go-app-shared/messaging/rabbitmq/dtos"
+	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 )
 
 type ResendVerificationEmail struct {
@@ -41,5 +41,5 @@ func (action *ResendVerificationEmail) Execute(ctx context.Context, email string
 
 	verificationURL := action.authConfig.FrontendURL + "/verify-email?token=" + verificationToken
 
-	return action.publisher.Publish(ctx, dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
+	return action.publisher.Publish(dtos.WelcomeEmail{Email: user.Email, Name: user.Name, VerificationURL: verificationURL})
 }

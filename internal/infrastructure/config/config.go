@@ -13,15 +13,12 @@ type Config struct {
 	Database DatabaseConfig
 	Log      LogConfig
 	Redis    RedisConfig
-	Auth     AuthConfig
-	RabbitMQ RabbitMQConfig
+	Auth  AuthConfig
+	Kafka KafkaConfig
 }
 
-type RabbitMQConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
+type KafkaConfig struct {
+	Brokers string
 }
 
 // AppConfig represents the application configuration.
@@ -152,11 +149,8 @@ func New() (*Config, error) {
 			EmailVerificationExpire: time.Duration(env.GetEnvAsInt("AUTH_EMAIL_VERIFICATION_EXPIRE", 60)) * time.Minute,
 			FrontendURL:             env.GetEnvAsString("AUTH_FRONTEND_URL", "http://localhost:3000"),
 		},
-		RabbitMQ: RabbitMQConfig{
-			Host:     env.GetEnvAsString("RABBITMQ_HOST", "rabbitmq"),
-			Port:     env.GetEnvAsString("RABBITMQ_PORT", "5672"),
-			User:     env.GetEnvAsString("RABBITMQ_USER", "guest"),
-			Password: env.GetEnvAsString("RABBITMQ_PASSWORD", "guest"),
+		Kafka: KafkaConfig{
+			Brokers: env.GetEnvAsString("KAFKA_BROKERS", "kafka:9092"),
 		},
 	}
 
