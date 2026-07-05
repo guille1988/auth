@@ -33,7 +33,7 @@ func (handler *LoginHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	response, err := handler.loginAction.Execute(loginData, context.GetHeader("User-Agent"))
+	response, err := handler.loginAction.Execute(context.Request.Context(), loginData, context.GetHeader("User-Agent"))
 
 	if err != nil {
 		if errors.Is(err, actions.ErrEmailNotVerified) {

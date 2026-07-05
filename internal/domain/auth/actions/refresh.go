@@ -29,8 +29,7 @@ func NewRefresh(userRepository userModel.Repository, redisRepository *redis.Repo
 	}
 }
 
-func (action *Refresh) Execute(refreshToken string) (*services.TokenResponse, error) {
-	ctx := context.Background()
+func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*services.TokenResponse, error) {
 	var sessionData data.RefreshToken
 	tokenKey := "auth:token:" + refreshToken
 	err := action.redisRepository.Get(ctx, tokenKey, &sessionData)

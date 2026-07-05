@@ -21,10 +21,8 @@ func NewConnection(cfg config.RedisConfig) (*redis.Client, error) {
 
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		err = client.Close()
-
-		if err != nil {
-			return nil, err
+		if closeErr := client.Close(); closeErr != nil {
+			return nil, fmt.Errorf("could not connect to redis: %w (also failed to close client: %v)", err, closeErr)
 		}
 
 		return nil, fmt.Errorf("could not connect to redis: %w", err)

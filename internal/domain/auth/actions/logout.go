@@ -13,6 +13,6 @@ func NewLogout(redisRepository *redis.Repository) *Logout {
 	return &Logout{redisRepository: redisRepository}
 }
 
-func (action *Logout) Execute(refreshToken string) error {
-	return action.redisRepository.Delete(context.Background(), "auth:token:"+refreshToken)
+func (action *Logout) Execute(ctx context.Context, refreshToken string) error {
+	return action.redisRepository.Delete(ctx, "auth:token:"+refreshToken)
 }

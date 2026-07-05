@@ -30,7 +30,7 @@ func (handler *LogoutHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	err = handler.logoutAction.Execute(refreshToken)
+	err = handler.logoutAction.Execute(context.Request.Context(), refreshToken)
 
 	if err != nil {
 		exceptions.NewServer(context, handler.env).Throw(err)

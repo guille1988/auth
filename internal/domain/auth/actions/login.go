@@ -36,7 +36,7 @@ func NewLogin(userRepository userModel.Repository, redisRepository *redis.Reposi
 	}
 }
 
-func (action *Login) Execute(loginData data.Login, device string) (*services.TokenResponse, error) {
+func (action *Login) Execute(ctx context.Context, loginData data.Login, device string) (*services.TokenResponse, error) {
 	user, err := action.userRepository.FindByEmail(loginData.Email)
 
 	if err != nil {
@@ -64,7 +64,7 @@ func (action *Login) Execute(loginData data.Login, device string) (*services.Tok
 		Device: device,
 	}
 
-	err = action.redisRepository.Set(context.Background(), "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
+	err = action.redisRepository.Set(ctx, "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
 
 	if err != nil {
 		return nil, err

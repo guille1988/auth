@@ -33,7 +33,7 @@ func (handler *RefreshHandler) Handle(context *gin.Context) {
 	}
 
 	var response *services.TokenResponse
-	response, err = handler.refreshAction.Execute(refreshToken)
+	response, err = handler.refreshAction.Execute(context.Request.Context(), refreshToken)
 
 	if err != nil {
 		exceptions.NewUnauthorized(context, handler.env).Throw(err)
