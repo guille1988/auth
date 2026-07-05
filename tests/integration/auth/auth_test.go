@@ -424,4 +424,20 @@ func TestAuthModule(test *testing.T) {
 
 		assert.Equal(test, http.StatusUnauthorized, response.Code)
 	})
+
+	integration.TestCase(test, "it should reject an empty verification token at the validation layer, not the JWT parser", func(test *testing.T) {
+		verifyPayload := map[string]string{"token": ""}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(verifyRequest)
+
+		assert.Equal(test, http.StatusUnprocessableEntity, response.Code)
+
+		var data map[string]any
+		_ = json.Unmarshal(response.Body.Bytes(), &data)
+		assert.Contains(test, data["error"], "Token", "expected a field validation error mentioning the Token field, not a JWT parse error")
+		assert.NotContains(test, data["error"], "invalid or expired verification token")
+	})
 }

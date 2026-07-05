@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -24,8 +25,9 @@ type Publisher interface {
 }
 
 type KafkaPublisher struct {
-	client *kgo.Client
-	topics map[reflect.Type]string
+	client   *kgo.Client
+	topicsMu sync.RWMutex
+	topics   map[reflect.Type]string
 }
 
 func NewKafkaPublisher(brokers string) *KafkaPublisher {
@@ -52,6 +54,9 @@ func (publisher *KafkaPublisher) Register(dto any, route Route) error {
 		t = t.Elem()
 	}
 
+	publisher.topicsMu.Lock()
+	defer publisher.topicsMu.Unlock()
+
 	publisher.topics[t] = route.RoutingKey
 
 	return nil
@@ -65,7 +70,9 @@ func (publisher *KafkaPublisher) Publish(dto any) error {
 		t = t.Elem()
 	}
 
+	publisher.topicsMu.RLock()
 	topic, ok := publisher.topics[t]
+	publisher.topicsMu.RUnlock()
 
 	if !ok {
 		return fmt.Errorf("no topic registered for %T", dto)
