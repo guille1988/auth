@@ -22,8 +22,16 @@ type TokenResponse struct {
 	ExpiresIn    int
 }
 
+type TokenPurpose string
+
+const (
+	AccessTokenPurpose            TokenPurpose = "access"
+	EmailVerificationTokenPurpose TokenPurpose = "email_verification"
+)
+
 type Claims struct {
-	UserUUID string `json:"user_uuid"`
+	UserUUID string       `json:"user_uuid"`
+	Purpose  TokenPurpose `json:"purpose"`
 	jwt.RegisteredClaims
 }
 
@@ -40,6 +48,7 @@ func (service *JWTService) GenerateEmailVerificationToken(userUUID string) (stri
 
 	claims := &Claims{
 		UserUUID: userUUID,
+		Purpose:  EmailVerificationTokenPurpose,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -56,6 +65,7 @@ func (service *JWTService) GenerateAccessToken(userUUID string, refreshToken str
 
 	claims := &Claims{
 		UserUUID: userUUID,
+		Purpose:  AccessTokenPurpose,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -78,7 +88,7 @@ func (service *JWTService) GenerateAccessToken(userUUID string, refreshToken str
 	}, nil
 }
 
-func (service *JWTService) ValidateToken(tokenString string) (*Claims, error) {
+func (service *JWTService) ValidateToken(tokenString string, expectedPurpose TokenPurpose) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		_, ok := token.Method.(*jwt.SigningMethodHMAC)
 
@@ -95,9 +105,13 @@ func (service *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 
 	claims, ok := token.Claims.(*Claims)
 
-	if ok && token.Valid {
-		return claims, nil
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
 	}
 
-	return nil, errors.New("invalid token")
+	if claims.Purpose != expectedPurpose {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }

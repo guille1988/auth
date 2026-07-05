@@ -28,7 +28,7 @@ func AuthMiddleware(cfg config.AuthConfig, env config.Env) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := jwtService.ValidateToken(parts[1])
+		claims, err := jwtService.ValidateToken(parts[1], services.AccessTokenPurpose)
 
 		if err != nil {
 			exceptions.NewUnauthorized(context, env).Throw(errors.New("invalid or expired token"))

@@ -20,7 +20,7 @@ func NewVerifyEmail(userRepository userModel.Repository, jwtService *services.JW
 }
 
 func (action *VerifyEmail) Execute(token string) error {
-	claims, err := action.jwtService.ValidateToken(token)
+	claims, err := action.jwtService.ValidateToken(token, services.EmailVerificationTokenPurpose)
 
 	if err != nil {
 		return errors.New("invalid or expired verification token")

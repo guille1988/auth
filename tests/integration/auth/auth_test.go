@@ -369,4 +369,59 @@ func TestAuthModule(test *testing.T) {
 
 		assert.Equal(test, http.StatusNoContent, response.Code)
 	})
+
+	integration.TestCase(test, "it should reject an access token used as an email verification token", func(test *testing.T) {
+		payload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    gofakeit.Email(),
+			"password": "password123",
+		}
+		body, _ := json.Marshal(payload)
+
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(body))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		registerResponse := integration.ExecuteRequest(registerRequest)
+
+		var data map[string]any
+		_ = json.Unmarshal(registerResponse.Body.Bytes(), &data)
+		accessToken := data["access_token"].(string)
+
+		verifyPayload := map[string]string{"token": accessToken}
+		verifyBody, _ := json.Marshal(verifyPayload)
+		verifyRequest, _ := http.NewRequest("POST", "/api/auth/verify-email", bytes.NewBuffer(verifyBody))
+		verifyRequest.Header.Set("Content-Type", "application/json")
+
+		response := integration.ExecuteRequest(verifyRequest)
+
+		assert.Equal(test, http.StatusUnprocessableEntity, response.Code)
+	})
+
+	integration.TestCase(test, "it should reject an email verification token used as a bearer access token", func(test *testing.T) {
+		email := gofakeit.Email()
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": "password123",
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		integration.ExecuteRequest(registerRequest)
+
+		appInstance, err := integration.GetApp()
+		assert.NoError(test, err)
+		userRepo := userModel.NewRepository(appInstance.Container.DefaultConnection)
+		user, _ := userRepo.FindByEmail(email)
+
+		jwtService := services.NewJWTService(appInstance.Config.Auth)
+		verificationToken, _ := jwtService.GenerateEmailVerificationToken(user.UUID.String())
+
+		validateRequest, _ := http.NewRequest("GET", "/api/auth/validate", nil)
+		validateRequest.Header.Set("Authorization", "Bearer "+verificationToken)
+
+		response := integration.ExecuteRequest(validateRequest)
+
+		assert.Equal(test, http.StatusUnauthorized, response.Code)
+	})
 }
