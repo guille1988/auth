@@ -7,6 +7,7 @@ import (
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/redis"
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
@@ -83,7 +84,16 @@ func (action *Register) Execute(ctx context.Context, regData data.Register, devi
 	err = action.redisRepository.Set(ctx, "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
 
 	if err != nil {
-		return nil, err
+		/*
+			The account and verification email are already real and don't
+			depend on Redis. Rather than fail the whole request (leaving the
+			caller with a "phantom" account and no way to retry, since a
+			second attempt would just hit "email already exists"), degrade:
+			issue an access-only response with no refresh session. The user
+			can log in normally once Redis recovers.
+		*/
+		slog.Error("failed to persist refresh session during register; issuing access-only response", "error", err)
+		return action.jwtService.GenerateAccessToken(user.UUID.String(), "")
 	}
 
 	return action.jwtService.GenerateAccessToken(user.UUID.String(), refreshToken)

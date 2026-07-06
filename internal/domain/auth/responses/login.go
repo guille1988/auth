@@ -23,10 +23,12 @@ type loginResponseData struct {
 }
 
 func (response *LoginResponse) Make(data *services.TokenResponse, authConfig config.AuthConfig, env config.Env) {
-	response.Context.SetSameSite(http.SameSiteStrictMode)
-	maxAge := int(authConfig.RefreshTokenExpire.Seconds())
-	secure := env == config.ProductionEnv
-	response.Context.SetCookie("refresh_token", data.RefreshToken, maxAge, "/", "", secure, true)
+	if data.RefreshToken != "" {
+		response.Context.SetSameSite(http.SameSiteStrictMode)
+		maxAge := int(authConfig.RefreshTokenExpire.Seconds())
+		secure := env == config.ProductionEnv
+		response.Context.SetCookie("refresh_token", data.RefreshToken, maxAge, "/", "", secure, true)
+	}
 
 	response.Context.JSON(http.StatusOK, loginResponseData{
 		AccessToken: data.AccessToken,
