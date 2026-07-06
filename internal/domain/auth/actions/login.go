@@ -70,7 +70,7 @@ func (action *Login) Execute(ctx context.Context, loginData data.Login, device s
 		return nil, err
 	}
 
-	err = action.publisher.Publish(dtos.UserLoggedIn{Email: user.Email, Name: user.Name})
+	err = action.publisher.Publish(dtos.UserLoggedIn{UUID: user.UUID.String(), Email: user.Email, Name: user.Name})
 
 	if err != nil {
 		return nil, err
