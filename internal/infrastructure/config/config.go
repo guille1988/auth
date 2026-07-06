@@ -2,10 +2,17 @@ package config
 
 import (
 	"auth/internal/infrastructure/env"
+	"errors"
 	"time"
 
 	"github.com/joho/godotenv"
 )
+
+/*
+insecureDefaultJWTSecret is the fallback value for AUTH_JWT_SECRET when the
+env var isn't set. It's fine for local/testing, but must never reach production.
+*/
+const insecureDefaultJWTSecret = "secret"
 
 // Config represents the application configuration.
 type Config struct {
@@ -13,8 +20,8 @@ type Config struct {
 	Database DatabaseConfig
 	Log      LogConfig
 	Redis    RedisConfig
-	Auth  AuthConfig
-	Kafka KafkaConfig
+	Auth     AuthConfig
+	Kafka    KafkaConfig
 }
 
 type KafkaConfig struct {
@@ -143,7 +150,7 @@ func New() (*Config, error) {
 			Database: env.GetEnvAsInt("REDIS_DATABASE", 0),
 		},
 		Auth: AuthConfig{
-			JWTSecret:               env.GetEnvAsString("AUTH_JWT_SECRET", "secret"),
+			JWTSecret:               env.GetEnvAsString("AUTH_JWT_SECRET", insecureDefaultJWTSecret),
 			AccessTokenExpire:       time.Duration(env.GetEnvAsInt("AUTH_ACCESS_TOKEN_EXPIRE", 15)) * time.Minute,
 			RefreshTokenExpire:      time.Duration(env.GetEnvAsInt("AUTH_REFRESH_TOKEN_EXPIRE", 10080)) * time.Minute,
 			EmailVerificationExpire: time.Duration(env.GetEnvAsInt("AUTH_EMAIL_VERIFICATION_EXPIRE", 60)) * time.Minute,
@@ -154,5 +161,26 @@ func New() (*Config, error) {
 		},
 	}
 
+	if err := validateProductionSecrets(config); err != nil {
+		return nil, err
+	}
+
 	return &config, nil
+}
+
+/*
+validateProductionSecrets refuses to start in production with an empty or
+well-known-default JWT secret, since tokens signed with it could be forged
+by anyone who has read this repository.
+*/
+func validateProductionSecrets(config Config) error {
+	if config.App.Env != ProductionEnv {
+		return nil
+	}
+
+	if config.Auth.JWTSecret == "" || config.Auth.JWTSecret == insecureDefaultJWTSecret {
+		return errors.New("AUTH_JWT_SECRET must be set to a strong, non-default value in production")
+	}
+
+	return nil
 }
