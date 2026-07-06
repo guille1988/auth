@@ -14,12 +14,7 @@ func NewUpdate(repository model.Repository) Update {
 }
 
 func (update Update) Execute(user *model.User, updateData data.UpdateUser) error {
-	updates := make(map[string]any)
-	updates["name"] = updateData.Name
-
-	if len(updates) == 0 {
-		return nil
-	}
+	updates := map[string]any{"name": updateData.Name}
 
 	return update.repository.Update(user, updates)
 }

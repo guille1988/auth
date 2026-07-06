@@ -205,6 +205,42 @@ func TestUserModule(test *testing.T) {
 		assert.Equal(test, http.StatusUnprocessableEntity, response.Code)
 	})
 
+	integration.TestCase(test, "it should reject creating a user with a duplicate email", func(test *testing.T) {
+		token := integration.GetToken()
+		userEmail := gofakeit.Email()
+		payload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    userEmail,
+			"password": "password123",
+		}
+		body, _ := json.Marshal(payload)
+
+		firstRequest, _ := http.NewRequest("POST", "/api/users/", bytes.NewBuffer(body))
+		firstRequest.Header.Set("Content-Type", "application/json")
+		firstRequest.Header.Set("Authorization", "Bearer "+token)
+		firstResponse := integration.ExecuteRequest(firstRequest)
+
+		assert.Equal(test, http.StatusCreated, firstResponse.Code)
+
+		duplicatePayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    userEmail,
+			"password": "password123",
+		}
+		duplicateBody, _ := json.Marshal(duplicatePayload)
+
+		secondRequest, _ := http.NewRequest("POST", "/api/users/", bytes.NewBuffer(duplicateBody))
+		secondRequest.Header.Set("Content-Type", "application/json")
+		secondRequest.Header.Set("Authorization", "Bearer "+token)
+		secondResponse := integration.ExecuteRequest(secondRequest)
+
+		assert.Equal(test, http.StatusUnprocessableEntity, secondResponse.Code, "a duplicate email must return a clean 422, not a raw 500")
+
+		var data map[string]any
+		_ = json.Unmarshal(secondResponse.Body.Bytes(), &data)
+		assert.Contains(test, data["error"], "already exists")
+	})
+
 	integration.TestCase(test, "it should fail to access users without token", func(test *testing.T) {
 		request, _ := http.NewRequest("GET", "/api/users/", nil)
 		response := integration.ExecuteRequest(request)

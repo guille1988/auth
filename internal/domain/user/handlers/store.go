@@ -7,6 +7,7 @@ import (
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/exceptions"
 	"auth/internal/infrastructure/validator"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -14,8 +15,9 @@ import (
 )
 
 type StoreHandler struct {
-	storeUser actions.Store
-	env       config.Env
+	repository model.Repository
+	storeUser  actions.Store
+	env        config.Env
 }
 
 func NewStore(db *gorm.DB, env config.Env) *StoreHandler {
@@ -23,8 +25,9 @@ func NewStore(db *gorm.DB, env config.Env) *StoreHandler {
 	storeUser := actions.NewStore(repository)
 
 	return &StoreHandler{
-		storeUser: storeUser,
-		env:       env,
+		repository: repository,
+		storeUser:  storeUser,
+		env:        env,
 	}
 }
 
@@ -34,7 +37,21 @@ func (handler *StoreHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	err := handler.storeUser.Execute(storeUserData)
+	exists, err := handler.repository.ExistByEmail(storeUserData.Email)
+
+	if err != nil {
+		exceptions.NewServer(context, handler.env).Throw(err)
+		return
+	}
+
+	if exists {
+		exceptions.NewUnprocessableEntity(context, handler.env).
+			Throw(errors.New("this e-mail already exists"))
+
+		return
+	}
+
+	err = handler.storeUser.Execute(storeUserData)
 
 	if err != nil {
 		exceptions.NewServer(context, handler.env).Throw(err)

@@ -37,7 +37,8 @@ func (handler *LogoutHandler) Handle(context *gin.Context) {
 		return
 	}
 
+	secure := handler.env == config.ProductionEnv
 	context.SetSameSite(http.SameSiteStrictMode)
-	context.SetCookie("refresh_token", "", -1, "/", "", false, true)
+	context.SetCookie("refresh_token", "", -1, "/", "", secure, true)
 	context.Status(http.StatusNoContent)
 }
