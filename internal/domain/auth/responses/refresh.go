@@ -2,6 +2,7 @@ package responses
 
 import (
 	"auth/internal/domain/auth/services"
+	"auth/internal/infrastructure/config"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -21,9 +22,11 @@ type refreshResponseData struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-func (response *RefreshResponse) Make(data *services.TokenResponse) {
+func (response *RefreshResponse) Make(data *services.TokenResponse, authConfig config.AuthConfig, env config.Env) {
 	response.Context.SetSameSite(http.SameSiteStrictMode)
-	response.Context.SetCookie("refresh_token", data.RefreshToken, 3600*24*7, "/", "", false, true)
+	maxAge := int(authConfig.RefreshTokenExpire.Seconds())
+	secure := env == config.ProductionEnv
+	response.Context.SetCookie("refresh_token", data.RefreshToken, maxAge, "/", "", secure, true)
 
 	response.Context.JSON(http.StatusOK, refreshResponseData{
 		AccessToken: data.AccessToken,

@@ -18,6 +18,7 @@ import (
 type RegisterHandler struct {
 	userRepository userModel.Repository
 	registerAction *actions.Register
+	authConfig     config.AuthConfig
 	env            config.Env
 }
 
@@ -25,6 +26,7 @@ func NewRegister(redisRepository *redis.Repository, publisher actions.MessagePub
 	return &RegisterHandler{
 		userRepository: userRepository,
 		registerAction: actions.NewRegister(userRepository, redisRepository, publisher, jwtService, authConfig),
+		authConfig:     authConfig,
 		env:            env,
 	}
 }
@@ -59,5 +61,5 @@ func (handler *RegisterHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	responses.NewRegisterResponse(context).Make(response)
+	responses.NewRegisterResponse(context).Make(response, handler.authConfig, handler.env)
 }

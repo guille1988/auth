@@ -14,12 +14,14 @@ import (
 
 type RefreshHandler struct {
 	refreshAction *actions.Refresh
+	authConfig    config.AuthConfig
 	env           config.Env
 }
 
 func NewRefresh(redisRepository *redis.Repository, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *RefreshHandler {
 	return &RefreshHandler{
 		refreshAction: actions.NewRefresh(userRepository, redisRepository, jwtService, authConfig),
+		authConfig:    authConfig,
 		env:           env,
 	}
 }
@@ -40,5 +42,5 @@ func (handler *RefreshHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	responses.NewRefreshResponse(context).Make(response)
+	responses.NewRefreshResponse(context).Make(response, handler.authConfig, handler.env)
 }

@@ -17,12 +17,14 @@ import (
 
 type LoginHandler struct {
 	loginAction *actions.Login
+	authConfig  config.AuthConfig
 	env         config.Env
 }
 
 func NewLogin(redisRepository *redis.Repository, publisher actions.MessagePublisher, userRepository userModel.Repository, jwtService *services.JWTService, authConfig config.AuthConfig, env config.Env) *LoginHandler {
 	return &LoginHandler{
 		loginAction: actions.NewLogin(userRepository, redisRepository, jwtService, authConfig, publisher),
+		authConfig:  authConfig,
 		env:         env,
 	}
 }
@@ -45,5 +47,5 @@ func (handler *LoginHandler) Handle(context *gin.Context) {
 		return
 	}
 
-	responses.NewLoginResponse(context).Make(response)
+	responses.NewLoginResponse(context).Make(response, handler.authConfig, handler.env)
 }

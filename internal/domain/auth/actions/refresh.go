@@ -32,7 +32,7 @@ func NewRefresh(userRepository userModel.Repository, redisRepository *redis.Repo
 func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*services.TokenResponse, error) {
 	var sessionData data.RefreshToken
 	tokenKey := "auth:token:" + refreshToken
-	err := action.redisRepository.Get(ctx, tokenKey, &sessionData)
+	err := action.redisRepository.GetDel(ctx, tokenKey, &sessionData)
 
 	if err != nil {
 		return nil, errors.New("invalid refresh token")
@@ -44,8 +44,6 @@ func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*servi
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
-
-	_ = action.redisRepository.Delete(ctx, tokenKey)
 
 	newRefreshToken := uuid.New().String()
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)

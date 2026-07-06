@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -175,6 +176,64 @@ func TestAuthModule(test *testing.T) {
 
 			assert.Contains(test, data, "access_token")
 		}
+	})
+
+	integration.TestCase(test, "it should only let one of two concurrent refresh requests succeed with the same token", func(test *testing.T) {
+		email := gofakeit.Email()
+		password := "password123"
+
+		registerPayload := map[string]string{
+			"name":     gofakeit.Name(),
+			"email":    email,
+			"password": password,
+		}
+		registerBody, _ := json.Marshal(registerPayload)
+		registerRequest, _ := http.NewRequest("POST", "/api/auth/register", bytes.NewBuffer(registerBody))
+		registerRequest.Header.Set("Content-Type", "application/json")
+		registerResponse := integration.ExecuteRequest(registerRequest)
+
+		assert.Equal(test, http.StatusCreated, registerResponse.Code)
+
+		var refreshTokenCookie *http.Cookie
+		for _, cookie := range registerResponse.Result().Cookies() {
+			if cookie.Name == "refresh_token" {
+				refreshTokenCookie = cookie
+				break
+			}
+		}
+		assert.NotNil(test, refreshTokenCookie)
+
+		const concurrentAttempts = 10
+		statusCodes := make(chan int, concurrentAttempts)
+		var waitGroup sync.WaitGroup
+
+		for i := 0; i < concurrentAttempts; i++ {
+			waitGroup.Add(1)
+			go func() {
+				defer waitGroup.Done()
+				refreshRequest, _ := http.NewRequest("POST", "/api/auth/refresh", nil)
+				refreshRequest.AddCookie(refreshTokenCookie)
+				response := integration.ExecuteRequest(refreshRequest)
+				statusCodes <- response.Code
+			}()
+		}
+
+		waitGroup.Wait()
+		close(statusCodes)
+
+		successCount := 0
+		unauthorizedCount := 0
+		for code := range statusCodes {
+			switch code {
+			case http.StatusOK:
+				successCount++
+			case http.StatusUnauthorized:
+				unauthorizedCount++
+			}
+		}
+
+		assert.Equal(test, 1, successCount, "exactly one concurrent refresh with the same token must succeed")
+		assert.Equal(test, concurrentAttempts-1, unauthorizedCount, "every other concurrent refresh with the same (now consumed) token must be rejected")
 	})
 
 	integration.TestCase(test, "it should logout a user", func(test *testing.T) {
