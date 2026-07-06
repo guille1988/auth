@@ -1,163 +1,166 @@
-### Authentication Microservice in Go
+# Auth Microservice
 
-This is a robust and scalable authentication microservice built with **Go**, following clean architecture principles. It provides user registration, login, token refreshing, and user management functionalities, using **JWT** for secure authentication and **Redis** for token management/blacklisting.
-
----
-
-### 🚀 Features
-
-*   **User Authentication**: Secure Login and Registration using bcrypt for password hashing.
-*   **JWT Management**: Issues Access and Refresh tokens.
-*   **Token Revocation**: Logout functionality that blacklists tokens in Redis.
-*   **User Management**: Full CRUD operations for user profiles (protected by auth middleware).
-*   **Clean Architecture**: Separation of concerns into domain, infrastructure, and application layers.
-*   **Containerized**: Fully Dockerized for easy deployment and local development.
-*   **Database Migrations & Seeding**: Built-in tools for managing database schema and initial data.
-*   **Testing Suite**: Includes both unit and integration tests using Testcontainers.
+HTTP API for user registration, authentication, and profile management. Issues and validates JWTs, manages refresh sessions in Redis, and publishes domain events to Kafka for the rest of the system to react to — it never calls `email` or `broadcasting` directly.
 
 ---
 
-### 🛠 Tech Stack
+## Features
 
-*   **Language**: Go 1.25+
-*   **Web Framework**: [Gin Gonic](https://github.com/gin-gonic/gin)
-*   **ORM**: [GORM](https://gorm.io/) (supports MySQL, PostgreSQL, SQLite)
-*   **Cache**: [Redis](https://redis.io/)
-*   **Authentication**: [JWT (golang-jwt)](https://github.com/golang-jwt/jwt)
-*   **Migrations**: [golang-migrate](https://github.com/golang-migrate/migrate)
-*   **Testing**: [Testify](https://github.com/stretchr/testify) & [Testcontainers](https://testcontainers.com/)
-
----
-
-### 📋 Prerequisites
-
-*   [Docker](https://www.docker.com/) and Docker Compose.
-*   [Go](https://golang.org/) (optional, for local development outside Docker).
-*   `make` (utility to run Makefile commands).
+- **Registration & Login**: bcrypt-hashed passwords, JWT access + refresh tokens issued on success.
+- **Email verification flow**: a dedicated, purpose-scoped JWT sent via the `email` service; protected routes are gated by `EnsureEmailVerified` until the user confirms.
+- **Refresh token rotation**: every `/refresh` call atomically consumes the old token and issues a new one (see [Security Notes](#security-notes)).
+- **Logout**: deletes the active refresh session from Redis.
+- **User CRUD**: full management of user profiles behind auth middleware.
+- **Graceful degradation on partial failure**: if Redis is unreachable during registration, the account and verification email are still real — the request returns an access-only token instead of a hard failure that would leave a "phantom" user (see [Design Decisions](#design-decisions)).
+- **Built-in load testing endpoint**: `/api/stress`, intentionally unauthenticated — it's the target of the system's k6 load test and drives the KEDA autoscaling on request rate (see the root README).
+- **Prometheus metrics** (`/metrics`) and **health check** (`/api/health`).
 
 ---
 
-### ⚙️ Getting Started
+## Tech Stack
 
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    cd auth
-    ```
-
-2.  **Initialize the project**:
-    This command will copy the `.env.example`, start the Docker containers, run migrations, and execute tests.
-    ```bash
-    make init
-    ```
-
-3.  **Run the application (Development mode)**:
-    ```bash
-    make run-dev
-    ```
+- **Language**: Go 1.25
+- **Web framework**: [Gin](https://github.com/gin-gonic/gin)
+- **ORM**: [GORM](https://gorm.io/) (MySQL, PostgreSQL, or SQLite via `DB_DRIVER`)
+- **Cache / sessions**: [Redis](https://redis.io/) (`go-redis/v9`)
+- **Messaging**: Kafka via [`twmb/franz-go`](https://github.com/twmb/franz-go)
+- **Auth**: [`golang-jwt/v5`](https://github.com/golang-jwt/jwt)
+- **Migrations**: [golang-migrate](https://github.com/golang-migrate/migrate)
+- **Testing**: [Testify](https://github.com/stretchr/testify) + [Testcontainers](https://testcontainers.com/)
 
 ---
 
-### 🛠 Development Commands
+## Folder Structure
 
-The project includes a `Makefile` to simplify common tasks:
-
- Command | Description |
- :--- | :--- |
- `make up` | Start infrastructure (MySQL, Redis, etc.) in background. |
- `make down` | Stop all containers. |
- `make migrate` | Run database migrations. |
- `make migrate-fresh` | Drop all tables and rerun migrations. |
- `make seed` | Populate the database with dummy data. |
- `make test` | Run all integration and unit tests. |
- `make run-prod` | Build and run the service in production-like mode. |
-
----
-
-### 📡 API Endpoints
-
-#### Authentication (`/api/auth`)
-*   `POST /register`: Register a new user.
-*   `POST /login`: Authenticate and receive JWT tokens.
-*   `POST /refresh`: Get a new access token using a refresh token.
-*   `DELETE /logout`: Revoke current tokens.
-
-#### Users (`/api/users`) - *Requires Authorization Header*
-*   `GET /`: List all users.
-*   `POST /`: Create a user manually.
-*   `GET /:uuid`: Get user details by UUID.
-*   `PATCH /:uuid`: Update user information.
-*   `DELETE /:uuid`: Remove a user.
-
----
-
-### 📂 Project Structure
+> For the general architecture patterns used here — the Module Pattern, Repository Pattern, layered `data/handlers/actions/responses` structure, dependency injection via `container`/`app`, typed config, and how to add a new endpoint — see the **[Architecture section of the root README](../../README.md#architecture)**. This section covers only what's specific to `auth`.
 
 ```text
-├── cmd/                # Entry points (API, Migrations, Seeder)
-├── internal/
-│   ├── bootstrap/      # App initialization logic
-│   ├── domain/         # Business logic (Auth, User modules)
-│   │   └── auth/       # Auth actions, handlers, services
-│   │   └── user/       # User entity, repository, handlers
-│   ├── infrastructure/ # Frameworks & Drivers (DB, Redis, Config, Middlewares)
-├── tests/              # Integration and Unit tests
-├── Dockerfile          # Production build configuration
-└── docker-compose.yaml # Local development environment
+internal/
+├── bootstrap/           # Wires config, DB, Redis, Kafka publisher; owns graceful startup/shutdown
+├── domain/
+│   ├── auth/            # Register, Login, Refresh, Logout, VerifyEmail, ResendVerification
+│   │   ├── actions/      # One business use case per file
+│   │   ├── handlers/     # HTTP handlers (thin: validate → call action → respond)
+│   │   └── services/     # JWTService (token issuance/validation)
+│   ├── user/             # Profile CRUD (protected)
+│   ├── health/            # Liveness
+│   └── stress/            # Load-test trigger
+├── infrastructure/
+│   ├── config/            # Typed, env-driven configuration
+│   ├── container/         # DB/Redis/Kafka connections, assembled once at boot
+│   ├── database/          # Connection setup per driver
+│   ├── redis/              # Session repository (Get/Set/Delete/GetDel)
+│   ├── exceptions/          # Environment-aware error responses (hides internals in production)
+│   ├── middlewares/          # Auth, EnsureEmailVerified, Prometheus, Logger, Recovery
+│   ├── providers/messaging/   # Kafka publisher (reflection-based DTO→topic registry)
+│   └── validator/              # Request binding + validation
+└── internal/shared/              # go-app-shared submodule (Kafka DTOs, routing keys)
 ```
 
 ---
 
-### 🔐 Environment Variables
+## API Endpoints
 
-Key configurations found in `.env`:
-*   `APP_PORT`: Server port (default: 8080).
-*   `DB_DRIVER`: `mysql`, `postgres`, or `sqlite`.
-*   `AUTH_JWT_SECRET`: Secret key for signing tokens.
-*   `AUTH_ACCESS_TOKEN_EXPIRE`: Access token TTL in minutes.
-*   `REDIS_HOST`: Redis connection host.
+### Auth (`/api/auth`)
+| Method | Path | Auth required | Description |
+|---|---|---|---|
+| POST | `/register` | No | Create account, issue verification email, return tokens |
+| POST | `/login` | No | Authenticate, return access + refresh tokens |
+| POST | `/refresh` | No (refresh token in body/cookie) | Rotate refresh session, issue new access token |
+| POST | `/verify-email` | No (verification token) | Mark account as verified |
+| POST | `/resend-verification` | No | Re-send the verification email |
+| DELETE | `/logout` | No (refresh token) | Revoke the active refresh session |
+| GET | `/validate` | Yes | Validate the current access token |
+
+### Users (`/api/users`) — all require a verified, authenticated user
+| Method | Path | Description |
+|---|---|---|
+| GET | `/` | List users |
+| POST | `/` | Create a user manually |
+| GET | `/:uuid` | Get a user by UUID |
+| PATCH | `/:uuid` | Update a user |
+| DELETE | `/:uuid` | Delete a user |
+
+### Other
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/health` | Liveness check |
+| POST | `/api/stress` | Publishes synthetic load to Kafka — public by design, see below |
+| GET | `/metrics` | Prometheus metrics |
 
 ---
 
-### 📨 Messaging — Publishing a new message
+## Security Notes
 
-To publish a new message to Kafka, follow these 3 steps without touching any messaging infrastructure files:
+- **Token purpose scoping**: access tokens and email-verification tokens both use JWT, but they are not interchangeable — each carries a `purpose` claim (`access` vs `email_verification`) that is checked on every validation. A verification token can never be replayed as an access token, and vice versa.
+- **Algorithm confusion protection**: `JWTService.ValidateToken` explicitly asserts the signing method is HMAC before trusting the signature, closing the classic `alg: none` bypass.
+- **Atomic refresh rotation**: `Refresh` uses Redis `GETDEL` (not `GET` + `DELETE`) to read and invalidate the old session in a single round trip, preventing a race where the same refresh token could be replayed concurrently.
+- **Production secret guard**: the app refuses to start in `production` if `AUTH_JWT_SECRET` is empty or left at its insecure default.
+- **`/api/stress` is intentionally public.** It exists to drive the k6 load test and the KEDA autoscaling policy on request rate (see the root README's "Load Testing & Autoscaling" section) — it does not touch user data, only publishes synthetic Kafka messages. Do not add auth here; it would defeat the load test's purpose.
 
-**1. Create the DTO** in `internal/shared/messaging/kafka/dtos/`:
+---
+
+## Design Decisions
+
+**Graceful degradation over hard failure on `Register`.** If the user row and verification email are already committed but persisting the refresh session to Redis fails, the request does not return a 500. A 500 here would leave the caller with a real, un-loggable-into account (a retry would just hit "email already exists"). Instead, the response degrades to an access-only token (no refresh session) and logs the failure — the user can log in normally once Redis recovers.
+
+**No blacklist of live access tokens.** Logout revokes the *refresh* session in Redis; a short-lived access token issued before logout remains valid until it naturally expires. This is a deliberate trade-off for short access-token TTLs rather than a per-request Redis lookup on every authenticated call — access token lifetime is configured via `AUTH_ACCESS_TOKEN_EXPIRE`.
+
+---
+
+## Messaging — Publishing a New Event
+
+To publish a new event to Kafka without touching any messaging infrastructure code:
+
+**1. Add the DTO** to the shared module (`internal/shared/messaging/kafka/dtos/`):
 ```go
-// internal/shared/messaging/kafka/dtos/password_reset.go
 type PasswordReset struct {
     Email string `json:"email"`
     Token string `json:"token"`
 }
 ```
 
-**2. Register the route** in `setupPublisher` inside `internal/bootstrap/api.go`:
+**2. Register the route** in `setupPublisher` (`internal/bootstrap/api.go`):
 ```go
 publisher.Register(dtos.PasswordReset{}, messaging.Route{
-    RoutingKey: "user.password_reset",
+    RoutingKey: constants.RoutePasswordReset,
 })
 ```
 
-**3. Inject and publish** in your domain action. Depend on the `actions.MessagePublisher` interface and call `Publish`:
+**3. Publish from a domain action**, depending only on the `MessagePublisher` interface:
 ```go
-type MyAction struct {
-    publisher actions.MessagePublisher
-    // ...
-}
-
-func (a *MyAction) Execute(ctx context.Context, ...) error {
-    return a.publisher.Publish(ctx, dtos.PasswordReset{Email: email, Token: token})
+func (a *MyAction) Execute(...) error {
+    return a.publisher.Publish(dtos.PasswordReset{Email: email, Token: token})
 }
 ```
 
-No infrastructure files need to be modified.
+The publisher resolves the destination topic by the DTO's Go type via reflection — no switch statements to maintain as event types grow.
 
 ---
 
-### 🧪 Testing
+## Environment Variables
 
-Run tests using Docker to ensure a clean environment (uses Testcontainers for DB/Redis):
+| Variable | Default | Description |
+|---|---|---|
+| `APP_PORT` | `8080` | HTTP port |
+| `DB_DRIVER` | `mysql` | `mysql`, `postgres`, or `sqlite` |
+| `AUTH_JWT_SECRET` | — | **Required in production** — rejected if empty/default |
+| `AUTH_ACCESS_TOKEN_EXPIRE` | 15 min | Access token TTL |
+| `AUTH_REFRESH_TOKEN_EXPIRE` | 7 days | Refresh session TTL |
+| `AUTH_EMAIL_VERIFICATION_EXPIRE` | 60 min | Verification token TTL |
+| `AUTH_FRONTEND_URL` | — | Base URL used to build the verification link |
+| `REDIS_HOST` / `REDIS_PORT` | — | Redis connection |
+| `KAFKA_BROKERS` | `kafka:9092` | Kafka bootstrap servers |
+| `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
+
+---
+
+## Getting Started
+
 ```bash
-make test
+make init           # copy .env, start containers, migrate, run tests
+make run-dev         # run with hot reload (air)
+make test             # integration + unit tests via Testcontainers
 ```
+
+Or from the repo root: `make up`, `make migrate`, `make test` (see the [root README](../../README.md)).
