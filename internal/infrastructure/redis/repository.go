@@ -40,9 +40,11 @@ func (repository *Repository) Delete(ctx context.Context, key string) error {
 	return repository.client.Del(ctx, key).Err()
 }
 
-// GetDel atomically retrieves and deletes the key, so concurrent callers
-// presenting the same one-time token cannot both succeed (only the first
-// GETDEL wins; the rest see a miss).
+/*
+GetDel atomically retrieves and deletes the key, so concurrent callers
+presenting the same one-time token cannot both succeed (only the first
+GETDEL wins; the rest see a miss).
+*/
 func (repository *Repository) GetDel(ctx context.Context, key string, dest any) error {
 	data, err := repository.client.GetDel(ctx, key).Bytes()
 

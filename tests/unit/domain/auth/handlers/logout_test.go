@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"auth/internal/domain/auth/handlers"
 	"auth/internal/infrastructure/config"
 	"auth/internal/infrastructure/redis"
 	"net/http"
@@ -40,7 +41,7 @@ func TestLogoutClearsCookieSecureByEnv(test *testing.T) {
 
 	test.Run("it should mark the cleared cookie Secure in production", func(test *testing.T) {
 		ctx, recorder := newTestLogoutContext()
-		NewLogout(repository, config.ProductionEnv).Handle(ctx)
+		handlers.NewLogout(repository, config.ProductionEnv).Handle(ctx)
 
 		cookie := cookieNamed(recorder, "refresh_token")
 		if assert.NotNil(test, cookie) {
@@ -50,7 +51,7 @@ func TestLogoutClearsCookieSecureByEnv(test *testing.T) {
 
 	test.Run("it should not mark the cleared cookie Secure in local", func(test *testing.T) {
 		ctx, recorder := newTestLogoutContext()
-		NewLogout(repository, config.LocalEnv).Handle(ctx)
+		handlers.NewLogout(repository, config.LocalEnv).Handle(ctx)
 
 		cookie := cookieNamed(recorder, "refresh_token")
 

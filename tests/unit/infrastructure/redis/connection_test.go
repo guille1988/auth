@@ -2,6 +2,7 @@ package redis
 
 import (
 	"auth/internal/infrastructure/config"
+	"auth/internal/infrastructure/redis"
 	"strings"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestNewConnectionReturnsUnderlyingErrorOnPingFailure(test *testing.T) {
 		Database: 0,
 	}
 
-	client, err := NewConnection(cfg)
+	client, err := redis.NewConnection(cfg)
 
 	assert.Nil(test, client)
 	assert.Error(test, err)

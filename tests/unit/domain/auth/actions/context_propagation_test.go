@@ -1,4 +1,4 @@
-package actions_test
+package actions
 
 import (
 	"auth/internal/domain/auth/actions"

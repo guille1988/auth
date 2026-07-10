@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
 
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 )
 
 // NewApi initializes the app instance with all necessary configuration.
@@ -111,11 +113,11 @@ func setupPublisher(cfg config.KafkaConfig) (messaging.Publisher, error) {
 	return publisher, nil
 }
 
-// Run starts the api and manages its lifecycle.
+// Run starts the api (HTTP and gRPC listeners) and manages its lifecycle.
 func Run(appInstance *app.App) error {
 	srv := newServer(appInstance)
 
-	serverErrors := make(chan error, 1)
+	serverErrors := make(chan error, 2)
 
 	go func() {
 		slog.Info("server is starting", "addr", srv.Addr)
@@ -126,7 +128,14 @@ func Run(appInstance *app.App) error {
 		}
 	}()
 
-	err := wait(srv, serverErrors)
+	grpcServer, err := startGRPCServer(appInstance, serverErrors)
+
+	if err != nil {
+		_ = srv.Close()
+		return err
+	}
+
+	err = wait(srv, grpcServer, serverErrors)
 
 	if err != nil {
 		return err
@@ -152,22 +161,55 @@ func newServer(appInstance *app.App) *http.Server {
 }
 
 // wait manages the application lifecycle (blocking until signal or error).
-func wait(srv *http.Server, serverErrors chan error) error {
+func wait(srv *http.Server, grpcServer *grpc.Server, serverErrors chan error) error {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
 	select {
 	case err := <-serverErrors:
+		/*
+		 One listener failed: stop the other before returning, so CloseAll
+		 never runs with a live listener.
+		*/
+		_ = srv.Close()
+		grpcServer.Stop()
+
 		return fmt.Errorf("server error: %w", err)
 	case sig := <-shutdown:
 		slog.Info("starting graceful shutdown", "signal", sig.String())
 
-		return shutdownServer(srv)
+		return shutdownServers(srv, grpcServer)
 	}
 }
 
-// shutdownServer concern: Specific logic to stop the HTTP server gracefully.
-func shutdownServer(srv *http.Server) error {
+/*
+shutdownServers stops both listeners gracefully, in parallel: k8s gives the
+pod terminationGracePeriodSeconds (60s), and the two 30s budgets would exceed
+it if run sequentially.
+*/
+func shutdownServers(srv *http.Server, grpcServer *grpc.Server) error {
+	var waitGroup sync.WaitGroup
+	var httpErr error
+
+	waitGroup.Add(2)
+
+	go func() {
+		defer waitGroup.Done()
+		httpErr = shutdownHTTPServer(srv)
+	}()
+
+	go func() {
+		defer waitGroup.Done()
+		shutdownGRPCServer(grpcServer)
+	}()
+
+	waitGroup.Wait()
+
+	return httpErr
+}
+
+// shutdownHTTPServer concern: Specific logic to stop the HTTP server gracefully.
+func shutdownHTTPServer(srv *http.Server) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

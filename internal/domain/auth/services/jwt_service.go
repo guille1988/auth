@@ -9,6 +9,13 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+var (
+	// ErrInvalidToken means the token failed signature or claims validation.
+	ErrInvalidToken = errors.New("invalid token")
+	// ErrWrongPurpose means the token is valid but was issued for another purpose.
+	ErrWrongPurpose = errors.New("invalid token purpose")
+)
+
 type JWTService struct {
 	secretKey               []byte
 	accessTokenExpire       time.Duration
@@ -106,11 +113,11 @@ func (service *JWTService) ValidateToken(tokenString string, expectedPurpose Tok
 	claims, ok := token.Claims.(*Claims)
 
 	if !ok || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	if claims.Purpose != expectedPurpose {
-		return nil, errors.New("invalid token")
+		return nil, ErrWrongPurpose
 	}
 
 	return claims, nil

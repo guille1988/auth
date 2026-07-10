@@ -1,6 +1,7 @@
 package responses
 
 import (
+	"auth/internal/domain/auth/responses"
 	"auth/internal/domain/auth/services"
 	"auth/internal/infrastructure/config"
 	"net/http"
@@ -34,7 +35,7 @@ func TestLoginResponseCookieHygiene(test *testing.T) {
 		ginContext, recorder := newTestGinContext()
 
 		authConfig := config.AuthConfig{RefreshTokenExpire: 1 * time.Hour}
-		NewLoginResponse(ginContext).Make(&services.TokenResponse{
+		responses.NewLoginResponse(ginContext).Make(&services.TokenResponse{
 			AccessToken:  "access",
 			RefreshToken: "refresh",
 			TokenType:    "Bearer",
@@ -50,7 +51,7 @@ func TestLoginResponseCookieHygiene(test *testing.T) {
 		ginContext, recorder := newTestGinContext()
 
 		authConfig := config.AuthConfig{RefreshTokenExpire: 1 * time.Hour}
-		NewLoginResponse(ginContext).Make(&services.TokenResponse{RefreshToken: "refresh"}, authConfig, config.ProductionEnv)
+		responses.NewLoginResponse(ginContext).Make(&services.TokenResponse{RefreshToken: "refresh"}, authConfig, config.ProductionEnv)
 
 		cookie, found := refreshCookieFrom(recorder)
 		assert.True(test, found)
@@ -61,7 +62,7 @@ func TestLoginResponseCookieHygiene(test *testing.T) {
 		ginContext, recorder := newTestGinContext()
 
 		authConfig := config.AuthConfig{RefreshTokenExpire: 1 * time.Hour}
-		NewLoginResponse(ginContext).Make(&services.TokenResponse{RefreshToken: "refresh"}, authConfig, config.LocalEnv)
+		responses.NewLoginResponse(ginContext).Make(&services.TokenResponse{RefreshToken: "refresh"}, authConfig, config.LocalEnv)
 
 		cookie, found := refreshCookieFrom(recorder)
 		assert.True(test, found)
