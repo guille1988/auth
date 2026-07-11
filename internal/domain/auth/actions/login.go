@@ -8,6 +8,7 @@ import (
 	"auth/internal/infrastructure/redis"
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/guille1988/go-app-shared/messaging/kafka/dtos"
@@ -21,6 +22,7 @@ var ErrEmailNotVerified = errors.New("email not verified")
 type Login struct {
 	userRepository  userModel.Repository
 	redisRepository *redis.Repository
+	sessionIndex    *services.SessionIndex
 	jwtService      *services.JWTService
 	authConfig      config.AuthConfig
 	publisher       MessagePublisher
@@ -30,6 +32,7 @@ func NewLogin(userRepository userModel.Repository, redisRepository *redis.Reposi
 	return &Login{
 		userRepository:  userRepository,
 		redisRepository: redisRepository,
+		sessionIndex:    services.NewSessionIndex(redisRepository),
 		jwtService:      jwtService,
 		authConfig:      authConfig,
 		publisher:       publisher,
@@ -60,14 +63,23 @@ func (action *Login) Execute(ctx context.Context, loginData data.Login, device s
 	expiresAt := now.Add(action.authConfig.RefreshTokenExpire)
 
 	sessionData := data.RefreshToken{
-		UserID: user.ID,
-		Device: device,
+		UserUUID: user.UUID.String(),
+		Device:   device,
 	}
 
-	err = action.redisRepository.Set(ctx, "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
+	err = action.redisRepository.Set(ctx, services.SessionKey(refreshToken), sessionData, time.Until(expiresAt))
 
 	if err != nil {
 		return nil, err
+	}
+
+	/*
+	 Best-effort: the session key is the source of truth. A missed index
+	 writing only causes one spurious REVOKED on the next revalidation tick,
+	 which the client's refresh (re-indexing) self-heals.
+	*/
+	if indexErr := action.sessionIndex.Add(ctx, user.UUID.String(), refreshToken, expiresAt); indexErr != nil {
+		slog.Error("failed to index refresh session", "error", indexErr)
 	}
 
 	err = action.publisher.Publish(dtos.UserLoggedIn{UUID: user.UUID.String(), Email: user.Email, Name: user.Name})

@@ -8,6 +8,7 @@ import (
 	"auth/internal/infrastructure/redis"
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 type Refresh struct {
 	userRepository  userModel.Repository
 	redisRepository *redis.Repository
+	sessionIndex    *services.SessionIndex
 	jwtService      *services.JWTService
 	authConfig      config.AuthConfig
 }
@@ -24,6 +26,7 @@ func NewRefresh(userRepository userModel.Repository, redisRepository *redis.Repo
 	return &Refresh{
 		userRepository:  userRepository,
 		redisRepository: redisRepository,
+		sessionIndex:    services.NewSessionIndex(redisRepository),
 		jwtService:      jwtService,
 		authConfig:      authConfig,
 	}
@@ -31,7 +34,7 @@ func NewRefresh(userRepository userModel.Repository, redisRepository *redis.Repo
 
 func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*services.TokenResponse, error) {
 	var sessionData data.RefreshToken
-	tokenKey := "auth:token:" + refreshToken
+	tokenKey := services.SessionKey(refreshToken)
 	err := action.redisRepository.GetDel(ctx, tokenKey, &sessionData)
 
 	if err != nil {
@@ -39,7 +42,7 @@ func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*servi
 	}
 
 	var user *userModel.User
-	user, err = action.userRepository.FindByID(sessionData.UserID)
+	user, err = action.userRepository.FindByUUID(sessionData.UserUUID)
 
 	if err != nil {
 		return nil, errors.New("user not found")
@@ -48,10 +51,23 @@ func (action *Refresh) Execute(ctx context.Context, refreshToken string) (*servi
 	newRefreshToken := uuid.New().String()
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
 
-	err = action.redisRepository.Set(ctx, "auth:token:"+newRefreshToken, sessionData, time.Until(expiresAt))
+	err = action.redisRepository.Set(ctx, services.SessionKey(newRefreshToken), sessionData, time.Until(expiresAt))
 
 	if err != nil {
 		return nil, err
+	}
+
+	/*
+	 Best-effort index rotation, Add before Remove: a single-session user
+	 must never hit a zero-member window mid-rotation, or a revalidation
+	 tick landing in between would spuriously revoke their connections.
+	*/
+	if indexErr := action.sessionIndex.Add(ctx, user.UUID.String(), newRefreshToken, expiresAt); indexErr != nil {
+		slog.Error("failed to index rotated refresh session", "error", indexErr)
+	}
+
+	if indexErr := action.sessionIndex.Remove(ctx, user.UUID.String(), refreshToken); indexErr != nil {
+		slog.Error("failed to remove rotated session from index", "error", indexErr)
 	}
 
 	return action.jwtService.GenerateAccessToken(user.UUID.String(), newRefreshToken)

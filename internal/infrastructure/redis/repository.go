@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -53,4 +54,45 @@ func (repository *Repository) GetDel(ctx context.Context, key string, dest any) 
 	}
 
 	return json.Unmarshal(data, dest)
+}
+
+/*
+AddToSortedSet inserts the member with the given score and refreshes the
+set's TTL, pipelined into one round trip. ZADD and EXPIRE always travel
+together, so a caller can never leave an immortal set behind.
+*/
+func (repository *Repository) AddToSortedSet(ctx context.Context, key, member string, score float64, ttl time.Duration) error {
+	pipeline := repository.client.TxPipeline()
+	pipeline.ZAdd(ctx, key, redis.Z{Score: score, Member: member})
+	pipeline.Expire(ctx, key, ttl)
+
+	_, err := pipeline.Exec(ctx)
+
+	return err
+}
+
+/*
+RemoveFromSortedSet removes the member from the sorted set; missing
+members and missing keys are no-ops.
+*/
+func (repository *Repository) RemoveFromSortedSet(ctx context.Context, key, member string) error {
+	return repository.client.ZRem(ctx, key, member).Err()
+}
+
+/*
+CountLiveMembers counts the members whose score is strictly after now,
+purging the expired ones first (pipelined). The purge lives inside the
+count on purpose: a caller that skipped it would count expired members
+as live.
+*/
+func (repository *Repository) CountLiveMembers(ctx context.Context, key string, now time.Time) (int64, error) {
+	pipeline := repository.client.TxPipeline()
+	pipeline.ZRemRangeByScore(ctx, key, "-inf", strconv.FormatInt(now.Unix(), 10))
+	count := pipeline.ZCard(ctx, key)
+
+	if _, err := pipeline.Exec(ctx); err != nil {
+		return 0, err
+	}
+
+	return count.Val(), nil
 }

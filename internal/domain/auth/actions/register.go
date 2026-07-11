@@ -23,6 +23,7 @@ type MessagePublisher interface {
 type Register struct {
 	userRepository  userModel.Repository
 	redisRepository *redis.Repository
+	sessionIndex    *services.SessionIndex
 	publisher       MessagePublisher
 	jwtService      *services.JWTService
 	authConfig      config.AuthConfig
@@ -32,6 +33,7 @@ func NewRegister(userRepository userModel.Repository, redisRepository *redis.Rep
 	return &Register{
 		userRepository:  userRepository,
 		redisRepository: redisRepository,
+		sessionIndex:    services.NewSessionIndex(redisRepository),
 		publisher:       publisher,
 		jwtService:      jwtService,
 		authConfig:      authConfig,
@@ -77,11 +79,11 @@ func (action *Register) Execute(ctx context.Context, regData data.Register, devi
 	expiresAt := time.Now().Add(action.authConfig.RefreshTokenExpire)
 
 	sessionData := data.RefreshToken{
-		UserID: user.ID,
-		Device: device,
+		UserUUID: user.UUID.String(),
+		Device:   device,
 	}
 
-	err = action.redisRepository.Set(ctx, "auth:token:"+refreshToken, sessionData, time.Until(expiresAt))
+	err = action.redisRepository.Set(ctx, services.SessionKey(refreshToken), sessionData, time.Until(expiresAt))
 
 	if err != nil {
 		/*
@@ -94,6 +96,11 @@ func (action *Register) Execute(ctx context.Context, regData data.Register, devi
 		*/
 		slog.Error("failed to persist refresh session during register; issuing access-only response", "error", err)
 		return action.jwtService.GenerateAccessToken(user.UUID.String(), "")
+	}
+
+	// Best-effort: see the same block in login.go.
+	if indexErr := action.sessionIndex.Add(ctx, user.UUID.String(), refreshToken, expiresAt); indexErr != nil {
+		slog.Error("failed to index refresh session", "error", indexErr)
 	}
 
 	return action.jwtService.GenerateAccessToken(user.UUID.String(), refreshToken)
