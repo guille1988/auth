@@ -14,7 +14,7 @@ HTTP API for user registration, authentication, and profile management. Issues a
 - **User CRUD**: full management of user profiles behind auth middleware.
 - **Graceful degradation on partial failure**: if Redis is unreachable during registration, the account and verification email are still real — the request returns an access-only token instead of a hard failure that would leave a "phantom" user (see [Design Decisions](#design-decisions)).
 - **Built-in load testing endpoint**: `/api/stress`, intentionally unauthenticated — it's the target of the system's k6 load test and drives the KEDA autoscaling on request rate (see the root README).
-- **Prometheus metrics** (`/metrics`) and **health check** (`/api/health`).
+- **Prometheus metrics** (`/metrics`) — HTTP request counts and, since the gRPC server is instrumented too, per-RPC counts (`grpc_requests_total`) — and **health check** (`/api/health`).
 
 ---
 
@@ -111,6 +111,8 @@ Two contract rules keep the caller's failure handling sane:
 - **Infrastructure failures are transport errors**: if the session store is unreachable, the RPC returns `Unavailable` instead of a verdict — so callers fail open rather than revoking everyone over a Redis hiccup.
 
 The index is deliberately **best-effort**: the session key remains the source of truth, writes to the index never fail a login/refresh/logout, and refresh rotates it add-before-remove so a single-session user never hits a spurious `REVOKED` mid-rotation.
+
+**Instrumented like the HTTP side**: a `UnaryServerInterceptor` counts every call in `grpc_requests_total{method,code}`, served on the same `/metrics` endpoint as `http_requests_total` — so `ValidateToken` traffic and error rates show up in the same Grafana dashboards as the rest of the service.
 
 ---
 
